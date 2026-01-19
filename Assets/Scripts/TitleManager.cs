@@ -11,8 +11,7 @@ public class TitleManager : MonoBehaviour
         // 데이터 초기화가 필요하면 여기서 GameManager 접근
         // GameManager.Instance.gold = 1000; 
 
-        // "LobbyScene"으로 이동
-        SceneManager.LoadScene("LobbyScene"); 
+        SceneManager.LoadScene("GuildCreationScene");
     }
 
     public void OnClickQuit()

@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 public class GameManager : MonoBehaviour
 {
@@ -10,6 +11,15 @@ public class GameManager : MonoBehaviour
     public int gold = 1000;          // 초기 자금
     public int reputation = 0;       // 명성
     public int day = 1;              // 날짜
+
+    [Header("건물 정보")]
+    public int guildLevel = 0; // 0: 텐트/판잣집, 1: 목조 건물, 2: 석조 건물 ...
+
+    public List<Adventurer> adventurers = new List<Adventurer>(); //모험가 명단
+
+    [Header("파티 데이터")]
+    public List<Party> partyList = new List<Party>();
+
 
     private void Awake()
     {
