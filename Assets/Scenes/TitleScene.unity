@@ -591,6 +591,7 @@ MonoBehaviour:
   day: 1
   guildLevel: 0
   adventurers: []
+  partyList: []
 --- !u!4 &848941991
 Transform:
   m_ObjectHideFlags: 0

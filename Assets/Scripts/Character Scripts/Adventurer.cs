@@ -31,13 +31,16 @@ public enum RankType
 [System.Serializable] // 이 줄이 있어야 나중에 인스펙터에서 보입니다!
 public class Adventurer
 {
+    public Adventurer() { }
     public string name;      // 이름
     public JobType job;      // 직업
     public RankType rank;    // 등급
     public TraitType trait; // 성격
     
     // 능력치
-    public int level;
+
+    public int level = 1;
+    
     public int hp;
     public int atk;
 
@@ -97,15 +100,3 @@ public class Adventurer
 
     
 }
-
-[System.Serializable]
-public class Party 
-    {
-        public string partyName; //파티 이름
-        public List<Adventurer> members = new List<Adventurer>(); // 멤버 리스트
-
-        public Party(string name)
-        {
-            partyName = name;
-        }
-    }

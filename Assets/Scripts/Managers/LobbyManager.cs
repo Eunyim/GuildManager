@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro; // 텍스트 매시 프로 필수
+using System.Collections.Generic;
 
 public class LobbyManager : MonoBehaviour
 {
@@ -29,7 +30,7 @@ public class LobbyManager : MonoBehaviour
     [Header("관리(명단) UI")]
     public GameObject managePopup;    // 관리 팝업창
     public Transform listContent;     // Scroll View 안의 Content (슬롯이 붙을 부모)
-    public GameObject slotPrefab;     // 아까 만든 Slot 프리팹
+    public GameObject slotPrefab;     // Slot 프리팹
 
     [Header("상세 정보 팝업 연결")]
     public GameObject detailPopup;        // 팝업 전체 오브젝트
@@ -38,6 +39,8 @@ public class LobbyManager : MonoBehaviour
     public TextMeshProUGUI detailTrait;   // 성격
     public TextMeshProUGUI detailParty;   // 소속 파티 상태
     public TextMeshProUGUI detailStats;   // 스탯 정보
+
+
 
     [Header("파티 목록 팝업")]
     public GameObject partyListPopup;
@@ -61,17 +64,30 @@ public class LobbyManager : MonoBehaviour
     public TextMeshProUGUI selectCountText; // "1/4" 표시
     public GameObject highlightFramePrefab; // 선택 시 씌울 노란 테두리 이미지 (옵션)
 
+    [Header("색상 설정")]
+    //명단 배경 갈색 (RGB: 60, 25, 12)
+    public Color normalColor = new Color(60f / 255f, 25f / 255f, 12f / 255f); 
+    public Color selectedColor = Color.yellow; // 선택 시 노란색
+
+    [Header("로비 캐릭터 설정")]
+    public GameObject lobbyChibiPrefab; // 프리팹
+    public RectTransform lobbyFloor;    // 활동 구역(Lobby_Floor)
+
     private Party currentViewingParty; // 지금 상세창 파티
     
     // 현재 보고 있는 모험가를 기억하는 변수 (해고할 때 필요)
     private Adventurer currentTarget;
+
+    public GameObject questPopup;
 
     
 
     // 시작할 때 UI 갱신
     void Start()
     {
-        RefreshUI();
+        RefreshUI(); //UI 새로고침
+        
+        UpdateLobbyCharacters(); //게임 시작하자마자 로비에 캐릭터 소환
     }
 
     // UI 새로고침 함수 (돈 쓰거나 날짜 바뀔 때 호출)
@@ -91,6 +107,8 @@ public class LobbyManager : MonoBehaviour
     {
         Debug.Log("모집 버튼 클릭");
         recruitPopup.SetActive(true);
+
+        recruitPopup.transform.SetAsLastSibling(); // 현재 창을 형제들 중 '막내'로 만들어서 화면 맨 앞에 그림 (다중 창)
     }
     // 팝업 안의 [닫기] 버튼을 누르면 -> 팝업을 끈다
     public void OnClickCloseRecruit()
@@ -101,6 +119,7 @@ public class LobbyManager : MonoBehaviour
     public void OnClickManage()
     {
         managePopup.SetActive(true); // 팝업 열기
+        managePopup.transform.SetAsLastSibling(); // 맨 앞으로
         RefreshMemberList();         // 명단 갱신
     }
 
@@ -113,6 +132,7 @@ public class LobbyManager : MonoBehaviour
     public void OnClickOpenPartyManage() //파티 관리 버튼
     {
         partyListPopup.SetActive(true);
+        partyListPopup.transform.SetAsLastSibling(); //맨 앞으로
         RefreshPartyList();
     }
 
@@ -135,6 +155,8 @@ public class LobbyManager : MonoBehaviour
     public void OnClickCreatePartyButton() // [파티 생성] 버튼
     {
         inputNamePopup.SetActive(true);
+
+        inputNamePopup.transform.SetAsLastSibling();
         nameInputField.text = ""; // 초기화
     }
 
@@ -159,6 +181,7 @@ public class LobbyManager : MonoBehaviour
     {
         currentViewingParty = party; // 선택한 파티 기억
         partyDetailPopup.SetActive(true);
+        partyDetailPopup.transform.SetAsLastSibling(); //맨 앞으로
         RefreshPartyDetail();
     }
 
@@ -212,7 +235,11 @@ public class LobbyManager : MonoBehaviour
 
     public void OnClickAddMemberButton() // [추가] 버튼
     {
-        memberSelectPopup.SetActive(true);
+        if (currentViewingParty == null) return;
+
+        memberSelectPopup.SetActive(true); // 멤버 선택 창을 맨 앞으로 가져오기
+        memberSelectPopup.transform.SetAsLastSibling(); 
+        
         RefreshSelectPopup();
     }
 
@@ -235,76 +262,94 @@ public class LobbyManager : MonoBehaviour
         // 3. 리스트 생성 루프
         foreach (Adventurer member in GameManager.Instance.adventurers)
         {
-            // 다른 파티에 속해있으면 건너뛰기
+            // 다른 파티 소속이면 패스
             if (member.assignedPartyIndex != -1 && !currentViewingParty.members.Contains(member)) 
                 continue;
 
-            // 슬롯 생성
             GameObject slot = Instantiate(memberSlotPrefab, selectListContent);
             SetupSlotBasic(slot, member);
 
-            // ★ 이미지 컴포넌트 안전하게 찾기 (최상위에 없으면 자식에서 찾음)
+            // 이미지 & 버튼 찾기
             Image bgImage = slot.GetComponent<Image>();
             if (bgImage == null) bgImage = slot.GetComponentInChildren<Image>();
 
-            // ★ 버튼 컴포넌트 안전하게 찾기
             Button btn = slot.GetComponent<Button>();
             if (btn == null) btn = slot.GetComponentInChildren<Button>();
 
-            // 하이라이트 처리 (bgImage가 있을 때만 실행)
+            // 텍스트 색상 변경을 위해 찾기
+            TextMeshProUGUI[] texts = slot.GetComponentsInChildren<TextMeshProUGUI>();
+
+            // ★ [핵심] 색상 적용 로직
             if (bgImage != null)
             {
-                // ▼ 오타 수정! (.members.Members -> .members)
                 if (currentViewingParty.members.Contains(member)) 
-                    bgImage.color = Color.yellow;
+                {
+                    // A. 선택된 상태 (노란 배경 + 검은 글씨)
+                    bgImage.color = selectedColor; 
+                    foreach(var txt in texts) txt.color = Color.black; 
+                }
                 else
-                    bgImage.color = Color.white;
+                {
+                    // B. 선택 안 된 상태 (지정하신 갈색 + 흰 글씨)
+                    bgImage.color = normalColor; 
+                    foreach(var txt in texts) txt.color = Color.white; 
+                }
             }
 
-            // 버튼 기능 연결 (btn이 있을 때만 실행)
+            // 버튼 기능 연결
             if (btn != null)
             {
                 btn.onClick.RemoveAllListeners();
-                // bgImage가 null일 수도 있으니 전달할 때 주의
-                btn.onClick.AddListener(() => OnToggleMember(member, bgImage));
+                btn.onClick.AddListener(() => OnToggleMember(member, bgImage, texts));
             }
         }
     }
 
     // 8-1. 클릭 시 넣었다 뺐다 (토글)
-    void OnToggleMember(Adventurer member, Image slotImage)
+   void OnToggleMember(Adventurer member, Image slotImage, TextMeshProUGUI[] texts)
     {
-        // A. 이미 멤버라면 -> 뺀다 (하이라이트 해제)
+        // A. 이미 멤버라면 -> 뺀다 (원상복구)
         if (currentViewingParty.members.Contains(member))
         {
             currentViewingParty.members.Remove(member);
-            member.assignedPartyIndex = -1; // 무소속
-            slotImage.color = Color.white;
+            member.assignedPartyIndex = -1; // -1은 '소속 없음'
+            
+            // 색상 원상복구
+            slotImage.color = normalColor;
+            foreach(var txt in texts) txt.color = Color.white;
         }
         // B. 멤버가 아니라면 -> 넣는다 (하이라이트)
         else
         {
-            // 8-2. 4명 초과 체크
             if (currentViewingParty.members.Count >= 4)
             {
-                Debug.Log("경고: 파티원은 최대 4명입니다!");
-                // (여기에 경고 팝업이나 텍스트 애니메이션 추가 가능)
+                Debug.Log("꽉 찼습니다!");
                 return;
             }
 
             currentViewingParty.members.Add(member);
-            member.assignedPartyIndex = 1; // (임시) 파티 소속됨 표시
-            slotImage.color = Color.yellow;
+
+            // ★ [수정된 부분] 무조건 1이 아니라, 실제 파티 번호를 찾아서 넣기
+            // GameManager의 파티 리스트에서 '지금 보고 있는 파티(currentViewingParty)'가 몇 번째인지 찾습니다.
+            int realPartyIndex = GameManager.Instance.partyList.IndexOf(currentViewingParty);
+            member.assignedPartyIndex = realPartyIndex; 
+            
+            // 하이라이트
+            slotImage.color = selectedColor;
+            foreach(var txt in texts) txt.color = Color.black;
         }
 
         // 인원수 텍스트 갱신
         int currentCount = currentViewingParty.members.Count;
-        selectCountText.text = $"현재 인원: {currentCount} / 4";
-        
-        // 상세 창도 실시간으로 갱신해주면 좋음
+        if(selectCountText != null) 
+        {
+            selectCountText.text = $"현재 인원: {currentCount} / 4";
+            selectCountText.color = (currentCount >= 4) ? Color.red : Color.white;
+        }
+
+        // 상세 창도 실시간으로 갱신
         RefreshPartyDetail();
     }
-
     // 슬롯 텍스트 채우는 도우미 함수
     void SetupSlotBasic(GameObject slot, Adventurer member)
     {
@@ -394,6 +439,8 @@ public class LobbyManager : MonoBehaviour
 
         // 팝업 켜기
         detailPopup.SetActive(true);
+
+        detailPopup.transform.SetAsLastSibling(); // 맨 앞으로 가져오기
     }
 
     // --- 2. [해고하기] 버튼 기능 ---
@@ -428,9 +475,9 @@ public class LobbyManager : MonoBehaviour
         HideTraitTooltip();
     }
 
-    public void OnClickShop()
+    public void OnClickquestPopup()
     {
-        Debug.Log("상점 버튼 클릭");
+        questPopup.SetActive(true);
     }
 
     public void OnClickExplore()
@@ -465,6 +512,8 @@ public class LobbyManager : MonoBehaviour
 
         // 7. 팝업 열어놓기 (채용 끝났으니)
         recruitPopup.SetActive(true);
+
+        UpdateLobbyCharacters(); //로비에 모험가 갱신
     }
 
     public void ShowTraitTooltip()// 툴팁 켜기 함수
@@ -479,5 +528,50 @@ public class LobbyManager : MonoBehaviour
     public void HideTraitTooltip()// 툴팁 끄기 함수
     {
         tooltipPanel.SetActive(false);
+    }
+
+     // - 로비 캐릭터 관리 -
+
+    // 로비 내의 캐릭터들을 기록하는 출석부
+    private Dictionary<Adventurer, GameObject> spawnedChibiMap = new Dictionary<Adventurer, GameObject>();
+
+    void UpdateLobbyCharacters()//로비에 캐릭터 업데이트
+    {
+        // 1. [제거 로직] 데이터에는 없는데 로비에만 있는 유령 캐릭터 삭제 (해고/사망 시 처리)
+        // (Dictionary를 돌면서 삭제하기 위해 리스트로 키만 먼저 복사함)
+        List<Adventurer> toRemove = new List<Adventurer>();
+
+        foreach (var pair in spawnedChibiMap)
+        {
+            // 게임매니저 명단에 이 모험가가 없으면?
+            if (!GameManager.Instance.adventurers.Contains(pair.Key))
+            {
+                Destroy(pair.Value); // 로비에서 삭제
+                toRemove.Add(pair.Key); // 출석부 지울 명단에 추가
+            }
+        }
+        // 출석부에서 진짜 지우기
+        foreach (var key in toRemove) spawnedChibiMap.Remove(key);
+
+
+        // 2. [생성 로직] 데이터에는 있는데 로비엔 없는 신입 캐릭터 소환
+        foreach (Adventurer adv in GameManager.Instance.adventurers)
+        {
+            // 이미 출석부에 있으면? -> 패스! (하던 산책 계속 하세요)
+            if (spawnedChibiMap.ContainsKey(adv)) 
+                continue;
+
+            // 없다면? -> 새로 소환!
+            GameObject chibi = Instantiate(lobbyChibiPrefab, lobbyFloor);
+            
+            // 위치 랜덤 조정 (안 그러면 다 정중앙에서 겹쳐서 태어남)
+            RectTransform rect = chibi.GetComponent<RectTransform>();
+            float rangeX = lobbyFloor.rect.width / 2f - 50f;
+            float rangeY = lobbyFloor.rect.height / 2f - 50f;
+            rect.anchoredPosition = new Vector2(Random.Range(-rangeX, rangeX), Random.Range(-rangeY, rangeY));
+
+            // 출석부에 등록
+            spawnedChibiMap.Add(adv, chibi);
+        }
     }
 }

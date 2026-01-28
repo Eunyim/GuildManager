@@ -17,9 +17,14 @@ public class GameManager : MonoBehaviour
 
     public List<Adventurer> adventurers = new List<Adventurer>(); //모험가 명단
 
+    
+
     [Header("파티 데이터")]
     public List<Party> partyList = new List<Party>();
 
+    [Header("전투 데이터")]
+    // 로비에서 파견 보낼 때 여기에 파티 정보를 저장하고 씬을 넘김
+    public Party currentDispatchParty;
 
     private void Awake()
     {
@@ -41,4 +46,7 @@ public class GameManager : MonoBehaviour
         gold += amount;
         Debug.Log($"[재정] 현재 골드: {gold} G");
     }
+
+    
 }
+
