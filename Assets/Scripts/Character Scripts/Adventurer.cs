@@ -4,11 +4,11 @@ using System.Collections.Generic;
 // 직업 종류 (Enum)
 public enum JobType
 {
-    전사, // 전사
-    마법사,    // 마법사
-    궁수,  // 궁수
-    성직자,  // 사제
-    도적    // 도적
+    Warrior, // 전사
+    Mage,    // 마법사
+    Archer,  // 궁수
+    Healer,  // 사제
+    Rogue    // 도적
 }
 // 성격 (enum)
 public enum TraitType

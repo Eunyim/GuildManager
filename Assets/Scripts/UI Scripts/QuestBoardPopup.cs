@@ -48,7 +48,12 @@ public class QuestBoardPopup : MonoBehaviour
     // 퀘스트 클릭 시 실행 (나중에 파견 창 띄울 곳)
     void OnClickQuest(QuestData quest)
     {
-        Debug.Log($"의뢰 선택됨: {quest.questName}");
-        // 여기에 '파티 선택 팝업'을 여는 코드가 들어갈 예정
+       Debug.Log($"의뢰 선택됨: {quest.questName} -> 파티 선택창으로 이동");
+        
+        // 로비 매니저에게 "이 퀘스트 할 건데 파티 좀 골라줘" 라고 요청
+        if (LobbyManager.Instance != null)
+        {
+            LobbyManager.Instance.OpenDispatchPartyPopup(quest);
+        }
     }
 }

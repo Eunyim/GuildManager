@@ -15,4 +15,6 @@ public class QuestData : ScriptableObject
     
     //권장 파티 레벨
     public int recommendedLevel;    
+
+    public GameObject enemyPrefab;
 }

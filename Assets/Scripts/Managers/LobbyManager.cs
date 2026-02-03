@@ -80,6 +80,10 @@ public class LobbyManager : MonoBehaviour
 
     public GameObject questPopup;
 
+// 파견을 위한 임시 저장 변수
+    private QuestData pendingQuest; // 지금 수락하려는 퀘스트
+    private bool isDispatchMode = false; // 지금 파티 상태 구분
+
     
 
     // 시작할 때 UI 갱신
@@ -179,10 +183,38 @@ public class LobbyManager : MonoBehaviour
 
     void OnClickPartyItem(Party party)
     {
-        currentViewingParty = party; // 선택한 파티 기억
-        partyDetailPopup.SetActive(true);
-        partyDetailPopup.transform.SetAsLastSibling(); //맨 앞으로
-        RefreshPartyDetail();
+        // A. 파견 모드일 때 (퀘스트 수락하러 온 경우)
+        if (isDispatchMode)
+        {
+            // 1. 파티가 텅 비었으면?
+            if (party.members.Count == 0)
+            {
+                Debug.Log("⚠️ 멤버가 없는 파티는 보낼 수 없습니다!");
+                return;
+            }
+
+            // 2. 이미 파견 나간 파티라면?
+            if (party.state != PartyState.Idle)
+            {
+                Debug.Log("⚠️ 이미 파견 중인 파티입니다!");
+                return;
+            }
+
+            // 3. 출동! (GameManager에게 명령)
+            GameManager.Instance.StartQuest(party, pendingQuest);
+            
+            // 4. 정리 (모드 끄기)
+            isDispatchMode = false;
+            pendingQuest = null;
+        }
+        // B. 일반 관리 모드일 때 (그냥 상세정보 보러 온 경우)
+        else
+        {
+            currentViewingParty = party; 
+            partyDetailPopup.SetActive(true);
+            partyDetailPopup.transform.SetAsLastSibling(); 
+            RefreshPartyDetail();
+        }
     }
 
     void RefreshPartyDetail()
@@ -366,7 +398,12 @@ public class LobbyManager : MonoBehaviour
     public void CloseInputPopup() => inputNamePopup.SetActive(false);
     public void ClosePartyDetailPopup() => partyDetailPopup.SetActive(false);
     public void CloseSelectPopup() => memberSelectPopup.SetActive(false);
-    public void ClosePartyListPopup() => partyListPopup.SetActive(false);
+    public void ClosePartyListPopup()
+    {
+        partyListPopup.SetActive(false);
+        isDispatchMode = false;
+        pendingQuest = null;
+    }
 
 
     void RefreshMemberList()
@@ -573,5 +610,18 @@ public class LobbyManager : MonoBehaviour
             // 출석부에 등록
             spawnedChibiMap.Add(adv, chibi);
         }
+    }
+
+    // 퀘스트 보드에서 호출할 함수 (파티 선택)
+    public void OpenDispatchPartyPopup(QuestData quest)
+    {
+        pendingQuest = quest; // 퀘스트 기억하기
+        isDispatchMode = true; // 파티 선택 중
+
+        //파티 목록 팝업 열기
+        partyListPopup.SetActive(true);
+        partyListPopup.transform.SetAsLastSibling();
+
+        RefreshPartyList(); //목록 갱신
     }
 }

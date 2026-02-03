@@ -7,20 +7,22 @@ public class Ally_Archer : BattleUnit
 
     protected override void Start()
     {
-        base.Start();
-        
+
         // 궁수 전용 스탯
         maxHp = 80f; // 체력 낮음
         currentHp = maxHp;
         attackRange = 6.0f; // 긴 사거리
         moveSpeed = 3.0f;
+        
+        base.Start();
+        
     }
 
-    protected override void PerformAttack()
+    protected override void Attack()
     {
         if(target == null || arrowPrefab == null) return;
 
-        Debug.Log($"🏹 {unitName}의 화살 발사!");
+        Debug.Log($"🏹 {name}의 화살 발사!");
         
         GameObject arrow = Instantiate(arrowPrefab, transform.position, Quaternion.identity);
         

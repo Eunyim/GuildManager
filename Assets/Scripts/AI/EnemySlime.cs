@@ -4,20 +4,21 @@ public class EnemySlime : BattleUnit
 {
     protected override void Start()
     {
-        base.Start();
 
-        // 슬라임 스탯
+                // 슬라임 스탯
         maxHp = 50f;
-        attackRange = 1.5f;
+        attackRange = 2.2f;
         moveSpeed = 1.5f; // 느림
         attackPower = 5f;
+        
+        base.Start();
     }
 
-    protected override void PerformAttack()
+    protected override void Attack()
     {
         if(target != null)
         {
-            Debug.Log($"💧 {unitName}의 몸통 박치기!");
+            
             target.TakeDamage(attackPower);
         }
     }
