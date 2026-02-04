@@ -14,11 +14,28 @@ public class BattleUnit : MonoBehaviour
     protected Animator anim;     
     protected float lastAttackTime; 
 
+    [Header("UI 설정")]
+    public GameObject hpBarPrefab;
+
+    // ★ [중요] 이 함수가 있어야 BattleManager가 데이터를 꽂아줍니다.
+    public void Initialize(Adventurer data)
+    {
+        maxHp = data.hp;
+        currentHp = maxHp;
+        attackPower = data.atk;
+        
+        // 이름 변경 (게임 오브젝트 이름도 바꾸기)
+        name = $"Unit_{data.name}";
+
+        // 만약 HP바가 이미 있다면 갱신 로직 필요 (여기선 생략)
+    }
+
     protected virtual void Start()
     {
-        currentHp = maxHp;
+        if (currentHp <= 0) currentHp = maxHp;
         anim = GetComponent<Animator>();
         FindNearestTarget();
+        CreateHPBar();
     }
 
     protected virtual void Update()
@@ -55,45 +72,33 @@ public class BattleUnit : MonoBehaviour
     {
         if (Time.time >= lastAttackTime + attackCooldown)
         {
-            Attack(); // 여기서 자식의 Attack()이 실행됩니다.
+            Attack(); 
             lastAttackTime = Time.time;
         }
     }
 
-    // ★ [수정] 자식이 override 할 수 있도록 virtual 추가!
     protected virtual void Attack()
     {
         Debug.Log($"{name}의 기본 공격! (데미지: {attackPower})");
-        
-        if (target != null)
-        {
-            target.TakeDamage(attackPower);
-        }
+        if (target != null) target.TakeDamage(attackPower);
     }
 
-    // ★ [추가] 데미지 받는 함수도 필요합니다.
     public virtual void TakeDamage(float damage)
     {
         currentHp -= damage;
         Debug.Log($"{name}가 {damage} 피해를 입음! 남은 체력: {currentHp}");
 
-        if (currentHp <= 0)
-        {
-            Die();
-        }
+        if (currentHp <= 0) Die();
     }
 
     protected virtual void Die()
     {
         Debug.Log($"{name} 사망!");
-        
-        // BattleManager에게 사망 소식 알리기
         if (BattleManager.Instance != null)
         {
             bool isPlayerSide = gameObject.CompareTag("Player");
             BattleManager.Instance.OnUnitDead(isPlayerSide);
         }
-
         Destroy(gameObject);
     }
 
@@ -115,10 +120,15 @@ public class BattleUnit : MonoBehaviour
             }
         }
 
-        if (nearestEnemy != null)
-        {
-            target = nearestEnemy.GetComponent<BattleUnit>();
-        }
+        if (nearestEnemy != null) target = nearestEnemy.GetComponent<BattleUnit>();
+    }
+
+    void CreateHPBar()
+    {
+        if (hpBarPrefab == null) return;
+        GameObject barObj = Instantiate(hpBarPrefab);
+        HPBar hpScript = barObj.GetComponent<HPBar>();
+        if (hpScript != null) hpScript.Setup(this);
     }
 
     void OnDrawGizmosSelected()

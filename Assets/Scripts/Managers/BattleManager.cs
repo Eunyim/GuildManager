@@ -127,6 +127,8 @@ public class BattleManager : MonoBehaviour
 
             // 소환!
             GameObject newUnit = Instantiate(prefabToSpawn);
+
+
             
             // 이름 변경
             newUnit.name = $"Unit_{member.name}";
@@ -147,7 +149,7 @@ public class BattleManager : MonoBehaviour
             BattleUnit unitScript = newUnit.GetComponent<BattleUnit>();
             if (unitScript != null)
             {
-                // unitScript.InitializeData(member); // 나중에 구현
+                unitScript.Initialize(member); 
             }
 
             index++;

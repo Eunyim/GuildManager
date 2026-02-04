@@ -1,17 +1,44 @@
 using UnityEngine;
-using UnityEngine.UI; // UI 건드릴 땐 필수!
+using UnityEngine.UI;
 
 public class HPBar : MonoBehaviour
 {
-    public Image fillImage; // 빨간색 이미지
+    public Slider slider;       // 슬라이더 연결
+    public Vector3 offset = new Vector3(0, 1.5f, 0); // 머리 위 높이
 
-    // 체력 갱신 함수 (현재체력 / 최대체력)
-    public void UpdateHP(float currentHp, float maxHp)
+    private Transform target;   // 따라다닐 주인
+    private BattleUnit unit;    // 주인의 스탯 정보
+
+    // ★ [핵심] 이 함수가 없어서 에러가 났던 겁니다! public 필수!
+    public void Setup(BattleUnit owner)
     {
-        if (fillImage != null)
+        target = owner.transform;
+        unit = owner;
+
+        // 슬라이더 최댓값 설정
+        if (slider != null)
         {
-            // 0 ~ 1 사이 값으로 변환
-            fillImage.fillAmount = currentHp / maxHp; 
+            slider.maxValue = unit.maxHp;
+            slider.value = unit.currentHp;
+        }
+    }
+
+    void LateUpdate()
+    {
+        // 주인이 없거나 죽었으면 나도 사라짐
+        if (target == null)
+        {
+            Destroy(gameObject); 
+            return;
+        }
+
+        // 1. 위치 따라가기 (주인 머리 위)
+        transform.position = target.position + offset;
+
+        // 2. 체력 갱신
+        if (slider != null && unit != null)
+        {
+            slider.value = unit.currentHp;
         }
     }
 }

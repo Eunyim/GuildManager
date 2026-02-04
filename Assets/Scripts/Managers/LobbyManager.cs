@@ -11,6 +11,10 @@ public class LobbyManager : MonoBehaviour
     {
         Instance = this;
     }
+    [Header("뽑기 가격")]
+    public int costBasic = 100;
+    public int costNormal = 500;
+    public int costPremium = 1000;
 
     [Header("툴팁 UI")]
     public GameObject tooltipPanel;         
@@ -523,7 +527,7 @@ public class LobbyManager : MonoBehaviour
         // 나중에 던전 씬 로드
     }
 
-    public void OnClickCard()
+    /*public void OnClickCard()
     {
         // 1. 돈이 충분한지 확인
         if (GameManager.Instance.gold < recruitCost)
@@ -551,7 +555,7 @@ public class LobbyManager : MonoBehaviour
         recruitPopup.SetActive(true);
 
         UpdateLobbyCharacters(); //로비에 모험가 갱신
-    }
+    }*/
 
     public void ShowTraitTooltip()// 툴팁 켜기 함수
     {
@@ -623,5 +627,38 @@ public class LobbyManager : MonoBehaviour
         partyListPopup.transform.SetAsLastSibling();
 
         RefreshPartyList(); //목록 갱신
+    }
+
+    public void OnclickSummonBasic()
+    {
+        TrySummon(SummonTier.Basic, costBasic);
+    }
+    public void OnclickSummonNormal()
+    {
+        TrySummon(SummonTier.Normal, costNormal);
+    }
+    public void OnclickSummonPremium()
+    {
+        TrySummon(SummonTier.Premium, costPremium);
+    }
+
+    private void TrySummon(SummonTier tier, int cost) // 소환 로직
+    {
+        if (GameManager.Instance.gold < cost) // 돈 체크
+        {
+            Debug.Log(" 골드 부족!");
+            return;
+        }
+
+        GameManager.Instance.gold -= cost; // 돈 차감
+
+        Adventurer newMember = AdventurerGenerator.Generate(tier); // 생성기에 정보 넘겨주기
+
+        GameManager.Instance.adventurers.Add(newMember); // 명단에 추가
+
+        Debug.Log($"[{tier} 소환 성공] {newMember.name} ({newMember.job}) - 등급: {newMember.rank} / HP: {newMember.hp} / ATK: {newMember.atk}");
+
+        RefreshUI();
+        UpdateLobbyCharacters();
     }
 }

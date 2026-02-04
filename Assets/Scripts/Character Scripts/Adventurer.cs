@@ -1,6 +1,14 @@
 using UnityEngine;
 using System.Collections.Generic;
 
+// 모험가 뽑기 종류
+public enum SummonTier 
+{ 
+    Basic,   // 초급
+    Normal,  // 일반
+    Premium  // 고급
+}
+
 // 직업 종류 (Enum)
 public enum JobType
 {
@@ -25,7 +33,7 @@ public enum TraitType
 // 등급 (Enum)
 public enum RankType
 {
-    C, B, A, S
+    D, C, B, A, S
 }
 
 [System.Serializable] // 이 줄이 있어야 나중에 인스펙터에서 보입니다!
@@ -43,6 +51,7 @@ public class Adventurer
     
     public int hp;
     public int atk;
+    public float speed;
 
     // -1이면 "대기 중(무소속)", 0, 1, 2...이면 해당 파티 소속
     public int assignedPartyIndex = -1;
