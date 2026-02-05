@@ -917,16 +917,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e42ff900d78bf04ebf46e65f1171b6d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BattleManager
-  unitPrefab: {fileID: 1823962271923221739, guid: 992af496f799c914bae9bb3926595023, type: 3}
-  spawnPointTeam: {fileID: 1064297571}
-  defaultEnemyPrefab: {fileID: 0}
-  spawnPointEnemy: {fileID: 2079707242}
-  resultPanel: {fileID: 1630060451}
-  resultText: {fileID: 1689074994}
+  dungeonStages: []
+  playerSpawnPoint: {fileID: 0}
+  enemySpawnPoint: {fileID: 0}
+  isBattleActive: 0
+  allyCount: 0
+  enemyCount: 0
   victoryPanel: {fileID: 1630060451}
   defeatPanel: {fileID: 1456191299}
   warriorPrefab: {fileID: 1823962271923221739, guid: 0d4280a75ba9f8b498ead3f3eab6ffa1, type: 3}
   archerPrefab: {fileID: 1823962271923221739, guid: 992af496f799c914bae9bb3926595023, type: 3}
+  magePrefab: {fileID: 1823962271923221739, guid: bd47dd1d2abc2b3478129d9b74456a0e, type: 3}
+  roguePrefab: {fileID: 1823962271923221739, guid: c6731dfbc4ba9a248be1cf3eb628b070, type: 3}
+  healerPrefab: {fileID: 1823962271923221739, guid: 2297ec2c636d4b54e8b29aef0d8fa786, type: 3}
+  damageTextPrefab: {fileID: 0}
 --- !u!4 &1345272940
 Transform:
   m_ObjectHideFlags: 0

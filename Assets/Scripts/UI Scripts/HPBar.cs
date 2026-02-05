@@ -3,42 +3,59 @@ using UnityEngine.UI;
 
 public class HPBar : MonoBehaviour
 {
-    public Slider slider;       // 슬라이더 연결
-    public Vector3 offset = new Vector3(0, 1.5f, 0); // 머리 위 높이
+    [Header("슬라이더 연결")]
+    public Slider hpSlider; // 빨간색/초록색 슬라이더
+    public Slider mpSlider; // 파란색 슬라이더
 
-    private Transform target;   // 따라다닐 주인
-    private BattleUnit unit;    // 주인의 스탯 정보
+    [Header("위치 조정")]
+    public Vector3 offset = new Vector3(0, 2.0f, 0); // 머리보다 약간 위
 
-    // ★ [핵심] 이 함수가 없어서 에러가 났던 겁니다! public 필수!
+    private Transform target;   // 따라다닐 주인 (Unit)
+    private BattleUnit unit;    // 주인의 데이터
+
+    // 유닛이 생성될 때 이 함수를 호출해서 연결해줌
     public void Setup(BattleUnit owner)
     {
         target = owner.transform;
         unit = owner;
 
-        // 슬라이더 최댓값 설정
-        if (slider != null)
+        // HP 바 초기화
+        if (hpSlider != null)
         {
-            slider.maxValue = unit.maxHp;
-            slider.value = unit.currentHp;
+            hpSlider.maxValue = unit.maxHp;
+            hpSlider.value = unit.currentHp;
+        }
+
+        // MP 바 초기화
+        if (mpSlider != null)
+        {
+            mpSlider.maxValue = unit.maxMp;
+            mpSlider.value = unit.currentMp;
         }
     }
 
     void LateUpdate()
     {
-        // 주인이 없거나 죽었으면 나도 사라짐
+        // 주인이 없거나 죽었으면 -> HP바도 삭제
         if (target == null)
         {
-            Destroy(gameObject); 
+            Destroy(gameObject);
             return;
         }
 
-        // 1. 위치 따라가기 (주인 머리 위)
+        // 1. 위치 따라가기
         transform.position = target.position + offset;
 
-        // 2. 체력 갱신
-        if (slider != null && unit != null)
+        // 2. HP 실시간 갱신
+        if (hpSlider != null && unit != null)
         {
-            slider.value = unit.currentHp;
+            hpSlider.value = unit.currentHp;
+        }
+
+        // 3. MP 실시간 갱신
+        if (mpSlider != null && unit != null)
+        {
+            mpSlider.value = unit.currentMp;
         }
     }
 }

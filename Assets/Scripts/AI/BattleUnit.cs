@@ -5,6 +5,9 @@ public class BattleUnit : MonoBehaviour
     [Header("기본 스탯 (자식에서 덮어씌움)")]
     public float maxHp = 100;
     public float currentHp;
+    public float currentMp = 0;
+    public float maxMp;
+    public float mpRegenOnHit = 20;
     public float attackRange = 1.5f; 
     public float moveSpeed = 2.0f;
     public float attackPower = 10f;
@@ -23,6 +26,7 @@ public class BattleUnit : MonoBehaviour
         maxHp = data.hp;
         currentHp = maxHp;
         attackPower = data.atk;
+        currentMp = 0;
         
         // 이름 변경 (게임 오브젝트 이름도 바꾸기)
         name = $"Unit_{data.name}";
@@ -72,7 +76,16 @@ public class BattleUnit : MonoBehaviour
     {
         if (Time.time >= lastAttackTime + attackCooldown)
         {
-            Attack(); 
+
+            if (currentMp >= maxMp)
+            {
+                UseSkill(); // 스킬 발동
+            }
+            else
+            {
+                Attack(); 
+            }
+            
             lastAttackTime = Time.time;
         }
     }
@@ -81,6 +94,17 @@ public class BattleUnit : MonoBehaviour
     {
         Debug.Log($"{name}의 기본 공격! (데미지: {attackPower})");
         if (target != null) target.TakeDamage(attackPower);
+
+        //마나 충전
+        currentMp += mpRegenOnHit;
+        if (currentMp > maxMp) currentMp = maxMp;
+    }
+
+    public virtual void UseSkill()
+    {
+        // 기본 유닛은 스킬이 없음 -> 그냥 강한 평타 or 로그
+        Debug.Log($"{name}의 스킬 발동! (구현 안됨)");
+        currentMp = 0; // MP 소모
     }
 
     public virtual void TakeDamage(float damage)

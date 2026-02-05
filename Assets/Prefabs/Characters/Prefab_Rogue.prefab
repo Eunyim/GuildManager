@@ -12,9 +12,9 @@ GameObject:
   - component: {fileID: 8904848711638685388}
   - component: {fileID: 859093360149577382}
   - component: {fileID: 6401171585953500548}
-  - component: {fileID: 1488826684104288377}
+  - component: {fileID: -5752748712168248959}
   m_Layer: 0
-  m_Name: Prefab_Warrior
+  m_Name: Prefab_Rogue
   m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -159,7 +159,7 @@ CapsuleCollider2D:
   m_Offset: {x: 0, y: 0}
   m_Size: {x: 2, y: 1}
   m_Direction: 1
---- !u!114 &1488826684104288377
+--- !u!114 &-5752748712168248959
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -168,15 +168,15 @@ MonoBehaviour:
   m_GameObject: {fileID: 1823962271923221739}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b14bf6765e99eba448804af83df60086, type: 3}
+  m_Script: {fileID: 11500000, guid: 9db7f407dc1029e45ac1d8cc8004531e, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Ally_Warrior
-  maxHp: 100
+  m_EditorClassIdentifier: Assembly-CSharp::Ally_Rogue
+  maxHp: 70
   currentHp: 0
   currentMp: 0
   maxMp: 0
   mpRegenOnHit: 20
-  attackRange: 1.5
+  attackRange: 2.2
   moveSpeed: 2
   attackPower: 10
   attackCooldown: 1

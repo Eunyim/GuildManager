@@ -171,9 +171,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 55cc5b4c2ff2a014cad3bdc4d347d4d4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Ally_Archer
-  currentState: 0
-  myTrait: 0
-  target: {fileID: 0}
+  maxHp: 100
+  currentHp: 0
+  currentMp: 0
+  maxMp: 0
+  mpRegenOnHit: 20
+  attackRange: 1.5
+  moveSpeed: 2
+  attackPower: 10
+  attackCooldown: 1
+  hpBarPrefab: {fileID: 8087522582081449336, guid: 8a09104b3916e884a9499c29e2b1b52e, type: 3}
   arrowPrefab: {fileID: 7895998445395645287, guid: 7f414904e41d6054ebaac7c982a72ec4, type: 3}
 --- !u!1 &3510299929602710749
 GameObject:
@@ -366,7 +373,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1d493a5a23c7ef84fb9f059d9e23f4da, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HPBar
-  fillImage: {fileID: 7712140125543664602}
+  hpSlider: {fileID: 0}
+  mpSlider: {fileID: 0}
+  offset: {x: 0, y: 2, z: 0}
 --- !u!1 &8173665716044572828
 GameObject:
   m_ObjectHideFlags: 0

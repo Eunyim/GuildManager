@@ -11,6 +11,8 @@ public class LobbyManager : MonoBehaviour
     {
         Instance = this;
     }
+
+
     [Header("뽑기 가격")]
     public int costBasic = 100;
     public int costNormal = 500;
@@ -27,6 +29,7 @@ public class LobbyManager : MonoBehaviour
 
     [Header("팝업창")]
     public GameObject recruitPopup;
+     public SummonResultPopup summonResultPopup; //결과창 스크립트로 연결
 
     [Header("모집 설정")]
     public int recruitCost = 100; // 모집 비용 (100골드)
@@ -656,7 +659,10 @@ public class LobbyManager : MonoBehaviour
 
         GameManager.Instance.adventurers.Add(newMember); // 명단에 추가
 
-        Debug.Log($"[{tier} 소환 성공] {newMember.name} ({newMember.job}) - 등급: {newMember.rank} / HP: {newMember.hp} / ATK: {newMember.atk}");
+       if (summonResultPopup != null)
+        {
+            summonResultPopup.ShowResult(newMember);
+        }
 
         RefreshUI();
         UpdateLobbyCharacters();

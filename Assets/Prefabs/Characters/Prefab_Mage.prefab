@@ -12,9 +12,9 @@ GameObject:
   - component: {fileID: 8904848711638685388}
   - component: {fileID: 859093360149577382}
   - component: {fileID: 6401171585953500548}
-  - component: {fileID: 1488826684104288377}
+  - component: {fileID: -7215291762708271032}
   m_Layer: 0
-  m_Name: Prefab_Warrior
+  m_Name: Prefab_Mage
   m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -159,7 +159,7 @@ CapsuleCollider2D:
   m_Offset: {x: 0, y: 0}
   m_Size: {x: 2, y: 1}
   m_Direction: 1
---- !u!114 &1488826684104288377
+--- !u!114 &-7215291762708271032
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -168,9 +168,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 1823962271923221739}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b14bf6765e99eba448804af83df60086, type: 3}
+  m_Script: {fileID: 11500000, guid: 0c1357ef86ac6174e807503c1a92c52d, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Ally_Warrior
+  m_EditorClassIdentifier: Assembly-CSharp::Ally_Mage
   maxHp: 100
   currentHp: 0
   currentMp: 0
@@ -181,6 +181,7 @@ MonoBehaviour:
   attackPower: 10
   attackCooldown: 1
   hpBarPrefab: {fileID: 8087522582081449336, guid: 8a09104b3916e884a9499c29e2b1b52e, type: 3}
+  fireballPrefab: {fileID: 7895998445395645287, guid: bad8fffd3d18b5942842367d919bbd40, type: 3}
 --- !u!1 &3510299929602710749
 GameObject:
   m_ObjectHideFlags: 0

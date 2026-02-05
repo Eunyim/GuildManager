@@ -20,6 +20,10 @@ public class GameManager : MonoBehaviour
 
     public QuestData currentQuest; // 어떤 퀘스트인가
 
+    [Header("프리팹 연결 (순서 중요!)")]
+    // ★ 이 줄이 없어서 에러가 났던 겁니다. 추가해주세요!
+    public GameObject[] unitPrefabs; // 0:전사, 1:궁수, 2:마법사, 3:도적, 4:힐러
+
 
 
     [Header("길드 데이터")]
@@ -110,6 +114,18 @@ public class GameManager : MonoBehaviour
 
         SceneManager.LoadScene("DungeonScene");
 
+    }
+
+    // 직업(JobType)을 주면 해당 프리팹을 뱉어내는 함수
+    public GameObject GetUnitPrefab(JobType job)
+    {
+        // unitPrefabs 배열 순서: 0:전사, 1:궁수, 2:마법사, 3:도적, 4:힐러... 라고 가정
+        int index = (int)job;
+        if (index >= 0 && index < unitPrefabs.Length)
+        {
+            return unitPrefabs[index];
+        }
+        return unitPrefabs[0]; // 없으면 기본값(전사) 리턴
     }
 
 

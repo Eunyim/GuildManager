@@ -180,9 +180,16 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d2c6ba8e0b52eb443ba1266a154d4027, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemySlime
-  currentState: 0
-  myTrait: 0
-  target: {fileID: 0}
+  maxHp: 100
+  currentHp: 0
+  currentMp: 0
+  maxMp: 0
+  mpRegenOnHit: 20
+  attackRange: 1.5
+  moveSpeed: 2
+  attackPower: 10
+  attackCooldown: 1
+  hpBarPrefab: {fileID: 8087522582081449336, guid: 8a09104b3916e884a9499c29e2b1b52e, type: 3}
 --- !u!1 &2868017171485248616
 GameObject:
   m_ObjectHideFlags: 0
@@ -449,4 +456,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1d493a5a23c7ef84fb9f059d9e23f4da, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HPBar
-  fillImage: {fileID: 8132706229136780603}
+  hpSlider: {fileID: 0}
+  mpSlider: {fileID: 0}
+  offset: {x: 0, y: 2, z: 0}
