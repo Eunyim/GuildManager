@@ -917,9 +917,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0e42ff900d78bf04ebf46e65f1171b6d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BattleManager
-  dungeonStages: []
-  playerSpawnPoint: {fileID: 0}
-  enemySpawnPoint: {fileID: 0}
+  dungeonStages:
+  - {fileID: 11400000, guid: dd2b11b1f564cf54db40b0adfa179219, type: 2}
+  - {fileID: 11400000, guid: c56053c8373aca34993b9cdce134a68d, type: 2}
+  - {fileID: 11400000, guid: 3c088cc04878b8b4bb273a79ef0a1e5d, type: 2}
+  playerSpawnPoint: {fileID: 1064297571}
+  enemySpawnPoint: {fileID: 2079707242}
   isBattleActive: 0
   allyCount: 0
   enemyCount: 0

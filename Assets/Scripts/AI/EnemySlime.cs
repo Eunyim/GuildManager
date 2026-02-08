@@ -6,10 +6,10 @@ public class EnemySlime : BattleUnit
     {
 
                 // 슬라임 스탯
-        maxHp = 50f;
+        maxHp = 500f;
         attackRange = 2.2f;
         moveSpeed = 1.5f; // 느림
-        attackPower = 5f;
+        attackPower = 50f;
         
         base.Start();
     }
