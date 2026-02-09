@@ -7,7 +7,7 @@ public class EnemySlime : BattleUnit
 
                 // 슬라임 스탯
         maxHp = 500f;
-        attackRange = 2.2f;
+        attackRange = 2.3f;
         moveSpeed = 1.5f; // 느림
         attackPower = 50f;
         
