@@ -2,70 +2,85 @@ using UnityEngine;
 
 public class BattleUnit : MonoBehaviour
 {
-    [Header("기본 스탯 (자식에서 덮어씌움)")]
+    [Header("기본 스탯")]
     public float maxHp = 100;
     public float currentHp;
+    public float maxMp = 100;
     public float currentMp = 0;
-    public float maxMp;
-    public float mpRegenOnHit = 20;
+    
+    [Header("전투 설정")]
     public float attackRange = 1.5f; 
     public float moveSpeed = 2.0f;
     public float attackPower = 10f;
     public float attackCooldown = 1.0f;
+    public float mpRegenOnHit = 20;
+
+    [Header("UI & 이펙트")]
+    public GameObject hpBarPrefab;
+    private HPBar myHPBar; // ★ 생성된 HP바를 기억할 변수
 
     protected BattleUnit target; 
     protected Animator anim;     
     protected float lastAttackTime; 
 
-    [Header("UI 설정")]
-    public GameObject hpBarPrefab;
-
-    // ★ [중요] 이 함수가 있어야 BattleManager가 데이터를 꽂아줍니다.
     public void Initialize(Adventurer data)
     {
         maxHp = data.hp;
         currentHp = maxHp;
         attackPower = data.atk;
-        currentMp = 0;
-        
-        // 이름 변경 (게임 오브젝트 이름도 바꾸기)
+        currentMp = 0; 
         name = $"Unit_{data.name}";
-
-        // 만약 HP바가 이미 있다면 갱신 로직 필요 (여기선 생략)
     }
 
     protected virtual void Start()
     {
         if (currentHp <= 0) currentHp = maxHp;
         anim = GetComponent<Animator>();
+        
+        // 타겟 찾기
         FindNearestTarget();
+        
+        // ★ HP바 생성 및 연결
         CreateHPBar();
     }
 
     protected virtual void Update()
     {
+        // 1. UI 갱신 (매 프레임 체력/마나 동기화)
+        if (myHPBar != null)
+        {
+            myHPBar.UpdateBar(currentHp, maxHp, currentMp, maxMp);
+        }
+
+        // 2. 타겟이 없거나 죽었으면 다시 찾기
         if (target == null || target.currentHp <= 0)
         {
             FindNearestTarget();
             return; 
         }
 
+        // 3. 거리 계산
         float distance = Vector3.Distance(transform.position, target.transform.position);
 
+        // 4. 이동 vs 공격 결정
         if (distance <= attackRange)
         {
+            // 사거리 안이면 멈추고 공격
             StopAndAttack();
         }
         else
         {
+            // 사거리 밖이면 이동
             MoveToTarget();
         }
     }
 
     protected virtual void MoveToTarget()
     {
+        // ★ 서로 밀지 않게 하려면 Rigidbody 설정을 건드려야 함 (아래 설명 참조)
         transform.position = Vector3.MoveTowards(transform.position, target.transform.position, moveSpeed * Time.deltaTime);
 
+        // 방향 전환
         if (target.transform.position.x < transform.position.x) 
             transform.localScale = new Vector3(-1, 1, 1); 
         else 
@@ -74,50 +89,62 @@ public class BattleUnit : MonoBehaviour
 
     protected void StopAndAttack()
     {
+        // 공격 쿨타임 체크
         if (Time.time >= lastAttackTime + attackCooldown)
         {
-
             if (currentMp >= maxMp)
             {
-                UseSkill(); // 스킬 발동
+                UseSkill();
             }
             else
             {
-                Attack(); 
+                Attack();
             }
-            
             lastAttackTime = Time.time;
         }
     }
 
     protected virtual void Attack()
     {
-        Debug.Log($"{name}의 기본 공격! (데미지: {attackPower})");
-        if (target != null) target.TakeDamage(attackPower);
+        // 근접 공격인 경우 여기서 바로 데미지
+        // 원거리(투사체)인 경우 자식 클래스(Archer/Mage)에서 override 함
+        if (target != null) 
+        {
+            target.TakeDamage(attackPower);
+            Debug.Log($"⚔️ {name}의 공격! -> {target.name} (HP: {target.currentHp})");
+        }
 
-        //마나 충전
+        // MP 회복
         currentMp += mpRegenOnHit;
         if (currentMp > maxMp) currentMp = maxMp;
     }
 
-    public virtual void UseSkill()
+    protected virtual void UseSkill()
     {
-        // 기본 유닛은 스킬이 없음 -> 그냥 강한 평타 or 로그
-        Debug.Log($"{name}의 스킬 발동! (구현 안됨)");
-        currentMp = 0; // MP 소모
+        Debug.Log($"{name}의 스킬!");
+        currentMp = 0; 
     }
 
     public virtual void TakeDamage(float damage)
     {
         currentHp -= damage;
-        Debug.Log($"{name}가 {damage} 피해를 입음! 남은 체력: {currentHp}");
+        
+        // 데미지 텍스트 (옵션)
+        if (BattleManager.Instance != null)
+        {
+            BattleManager.Instance.ShowDamageText(transform.position, damage, false);
+        }
 
         if (currentHp <= 0) Die();
     }
 
     protected virtual void Die()
     {
-        Debug.Log($"{name} 사망!");
+        Debug.Log($"💀 {name} 사망!");
+        
+        // 죽으면 HP바도 같이 삭제
+        if (myHPBar != null) Destroy(myHPBar.gameObject);
+
         if (BattleManager.Instance != null)
         {
             bool isPlayerSide = gameObject.CompareTag("Player");
@@ -150,14 +177,12 @@ public class BattleUnit : MonoBehaviour
     void CreateHPBar()
     {
         if (hpBarPrefab == null) return;
-        GameObject barObj = Instantiate(hpBarPrefab);
-        HPBar hpScript = barObj.GetComponent<HPBar>();
-        if (hpScript != null) hpScript.Setup(this);
-    }
-
-    void OnDrawGizmosSelected()
-    {
-        Gizmos.color = Color.red;
-        Gizmos.DrawWireSphere(transform.position, attackRange);
+        
+        // 유닛의 자식으로 생성해서 따라다니게 함
+        GameObject barObj = Instantiate(hpBarPrefab, transform); 
+        
+        // ★ 생성된 스크립트를 가져와서 변수에 저장!
+        myHPBar = barObj.GetComponent<HPBar>();
+        if (myHPBar != null) myHPBar.Setup(this);
     }
 }

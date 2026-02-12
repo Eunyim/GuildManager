@@ -585,6 +585,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5ab21bc38ec540fcbd431a6d1eaa2c74, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
+  currentDispatchParty:
+    partyName: 
+    members: []
+    state: 0
+  currentQuest: {fileID: 0}
+  unitPrefabs: []
   guildName: "\uC6A9\uAC10\uD55C \uBAA8\uD5D8\uAC00\uB4E4"
   gold: 1000
   reputation: 0

@@ -23,7 +23,7 @@ public class Ally_Healer : BattleUnit
     }
 
     // ★ public (부모가 public이므로)
-    public override void UseSkill()
+    protected override void UseSkill()
     {
         Debug.Log($"✨ {name}의 치유 스킬 시전!");
 

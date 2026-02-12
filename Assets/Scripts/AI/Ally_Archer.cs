@@ -20,18 +20,19 @@ public class Ally_Archer : BattleUnit
 
     protected override void Attack()
     {
-        if(target == null || arrowPrefab == null) return;
-
-        Debug.Log($"🏹 {name}의 화살 발사!");
+        if (target == null) return;
         
+        // 화살 생성
         GameObject arrow = Instantiate(arrowPrefab, transform.position, Quaternion.identity);
+        Arrow proj = arrow.GetComponent<Arrow>();
         
-        Vector3 dir = (target.transform.position - transform.position).normalized;
+        if (proj != null)
+        {
+            // 투사체 세팅 (위치, 데미지, 타겟 태그)
+            proj.Setup(target.transform.position, attackPower, target.tag);
+        }
         
-        Projectile p = arrow.GetComponent<Projectile>();
-        
-        // 아군이면 적을, 적이면 아군을 타겟팅
-        string targetTag = gameObject.CompareTag("Player") ? "Enemy" : "Player";
-        p.Setup(dir, attackPower, targetTag);
+        // MP 회복
+        currentMp += mpRegenOnHit;
     }
 }

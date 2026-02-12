@@ -22,7 +22,7 @@ public class Ally_Mage : BattleUnit
         base.Attack();
     }
 
-    public override void UseSkill()
+    protected override void UseSkill()
     {
         Debug.Log($"🔥 {name}의 메테오 스트라이크!");
 
@@ -30,7 +30,7 @@ public class Ally_Mage : BattleUnit
 
         GameObject fireball = Instantiate(fireballPrefab, transform.position, Quaternion.identity);
         
-        Projectile proj = fireball.GetComponent<Projectile>();
+        Fireball proj = fireball.GetComponent<Fireball>();
         if (proj != null)
         {
             // ★ [수정됨] 3번째 재료인 target.tag를 넣어줘서 에러 해결!

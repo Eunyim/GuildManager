@@ -30,7 +30,7 @@ public class Ally_Rogue : BattleUnit
     }
 
     // ★ [수정] 부모(BattleUnit)가 public이므로 여기도 public이어야 함!
-    public override void UseSkill()
+    protected override void UseSkill()
     {
         Debug.Log($"🗡️ {name}의 암살 스킬!");
         if (target != null)

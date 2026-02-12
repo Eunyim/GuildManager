@@ -82,7 +82,7 @@ SpriteRenderer:
   m_GlobalIlluminationMeshLod: 0
   m_SortingLayerID: 0
   m_SortingLayer: 0
-  m_SortingOrder: 1
+  m_SortingOrder: 10
   m_MaskInteraction: 0
   m_Sprite: {fileID: 10913, guid: 0000000000000000f000000000000000, type: 0}
   m_Color: {r: 0.5471698, g: 0.012904947, b: 0.09673285, a: 1}
@@ -165,7 +165,7 @@ BoxCollider2D:
     drawMode: 0
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Size: {x: 0.8, y: 0.2}
+  m_Size: {x: 1.6, y: 1.6}
   m_EdgeRadius: 0
 --- !u!114 &6532751514252069206
 MonoBehaviour:
