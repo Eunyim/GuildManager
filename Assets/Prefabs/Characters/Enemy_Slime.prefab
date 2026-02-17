@@ -189,3 +189,8 @@ MonoBehaviour:
   attackCooldown: 1
   mpRegenOnHit: 20
   hpBarPrefab: {fileID: 542229512560366998, guid: 295e6bd25697dc745a632d9c842d2ab1, type: 3}
+  dropTable:
+  - item: {fileID: 11400000, guid: 18c2075a8848eac45b1e81be461a6e45, type: 2}
+    dropRate: 80
+  - item: {fileID: 11400000, guid: 61afa7fa8d2eb304990bd63650d523be, type: 2}
+    dropRate: 20
