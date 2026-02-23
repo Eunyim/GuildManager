@@ -43,17 +43,19 @@ public class Arrow : MonoBehaviour
     // 4. 충돌 처리 (실제로 맞았을 때)
     void OnTriggerEnter2D(Collider2D collision)
     {
-        // 내가 노리는 태그(적)와 부딪혔는지 확인
-        if (collision.CompareTag(targetTag))
+       if (string.IsNullOrEmpty(targetTag)) return;
+
+    // 내가 노리는 태그와 부딪혔는지 확인
+    if (collision.CompareTag(targetTag))
+    {
+        BattleUnit unit = collision.GetComponent<BattleUnit>();
+        if (unit != null)
         {
-            BattleUnit unit = collision.GetComponent<BattleUnit>();
-            if (unit != null)
-            {
-                unit.TakeDamage(damage); // 데미지 주기
-                Debug.Log($"💥 명중! {damage} 데미지");
-            }
-            Destroy(gameObject); // 화살 삭제
+            unit.TakeDamage(damage); 
+            Debug.Log($"💥 명중! {damage} 데미지");
         }
+        Destroy(gameObject); 
+    }
     }
     
     // 3D일 경우를 대비해 3D 충돌도 추가

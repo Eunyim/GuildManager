@@ -46,24 +46,28 @@ public class EnemySlime : BattleUnit
         }
     }
 
+    protected override void Die()
+    {
+        CheckDrop();
+        base.Die(); // 기존 사망 처리(로그 띄우고 파괴)
+    }
+
     void CheckDrop()
     {
-        if (dropTable == null) return;
+        if (dropTable == null || dropTable.Count == 0) return; 
 
         foreach (DropItem loot in dropTable)
         {
-            // 0~100 사이 랜덤 숫자 뽑기
             float randomValue = Random.Range(0f, 100f);
-
-            // 확률 당첨!
             if (randomValue <= loot.dropRate)
             {
                 Debug.Log($"💎 득템! [{name}]에게서 [{loot.item.itemName}] 획득!");
                 
-                // ★ 나중에 여기에 [GameManager.Instance.AddItem(loot.item)] 추가 예정
-                // 지금은 로그만 띄웁니다.
-                
-                // (선택) 바닥에 아이템 떨어지는 연출을 원하면 여기서 프리팹 생성
+                // ★ 배틀 매니저의 가방에 아이템 넣기!
+                if (BattleManager.Instance != null)
+                {
+                    BattleManager.Instance.AddItemToLootBag(loot.item);
+                }
             }
         }
     }

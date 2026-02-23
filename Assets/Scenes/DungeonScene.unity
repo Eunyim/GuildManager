@@ -933,6 +933,8 @@ MonoBehaviour:
   magePrefab: {fileID: 1823962271923221739, guid: bd47dd1d2abc2b3478129d9b74456a0e, type: 3}
   roguePrefab: {fileID: 1823962271923221739, guid: c6731dfbc4ba9a248be1cf3eb628b070, type: 3}
   healerPrefab: {fileID: 1823962271923221739, guid: 2297ec2c636d4b54e8b29aef0d8fa786, type: 3}
+  earnedItems: []
+  treasureChestPrefab: {fileID: 4098219576457141253, guid: 32450f4e72cd0b541a5766c644e31d66, type: 3}
   damageTextPrefab: {fileID: 0}
 --- !u!4 &1345272940
 Transform:

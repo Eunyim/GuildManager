@@ -33,6 +33,12 @@ public class BattleManager : MonoBehaviour
     public GameObject roguePrefab;
     public GameObject healerPrefab;
 
+    [Header("던전 전리품")]
+    public List<MonsterDropData> earnedItems = new List<MonsterDropData>(); // ★ 던전에서 주운 아이템들
+
+    [Header("던전 오브젝트")]
+    public GameObject treasureChestPrefab; // ★ 추가: 보물상자 프리팹
+
     // (에러 방지용: 안 써도 둠)
     public GameObject damageTextPrefab; 
 
@@ -188,9 +194,42 @@ public class BattleManager : MonoBehaviour
                 Debug.Log("✅ 스테이지 클리어! 잠시 후 다음 방으로 이동합니다...");
                 isBattleActive = false;
                 
-                // 다음 스테이지로 이동
-                StartCoroutine(StartStageCoroutine(currentStageIndex + 1));
+                SpawnTreasureChest(); // ★ 바로 넘어가지 말고 상자 소환!
             }
+        }
+    }
+
+    void SpawnTreasureChest()
+    {
+        if (treasureChestPrefab != null)
+        {
+            // 화면 중앙쯤에 상자 생성
+            Instantiate(treasureChestPrefab, new Vector3(0, -1, 0), Quaternion.identity);
+        }
+        else
+        {
+            // 프리팹 안 넣었으면 그냥 바로 다음 스테이지로
+            GoToNextStage(); 
+        }
+    }
+
+    // ★ 상자를 열었을 때 호출될 함수 (기존 StartStageCoroutine 부르는 역할)
+    // 상자를 열었을 때 호출될 함수
+    public void GoToNextStage()
+    {
+        currentStageIndex++; // 다음 방 번호로 올림
+        
+        // ★ [핵심 수정] QuestData에서 찾지 말고, 일단 "3스테이지"라고 횟수를 못 박아버립니다!
+        // (만약 BattleManager 안에 stages 리스트가 있다면 stages.Count로 적으셔도 됩니다)
+        if (currentStageIndex < 3) 
+        {
+            // 다음 방으로 이동! (괄호 안에 currentStageIndex 넣기)
+            StartCoroutine(StartStageCoroutine(currentStageIndex)); 
+        }
+        else
+        {
+            Debug.Log("🎉 던전 완전 클리어! 최종 보상 정산 화면으로!");
+            // (나중에 여기에 결과창 UI 띄우는 코드 추가)
         }
     }
 
@@ -234,6 +273,12 @@ public class BattleManager : MonoBehaviour
 
         // 씬 이동
         SceneManager.LoadScene("LobbyScene");
+    }
+
+    public void AddItemToLootBag(MonsterDropData item)
+    {
+        earnedItems.Add(item);
+        Debug.Log($"🎒 가방에 챙김: {item.itemName} (현재 가방에 총 {earnedItems.Count}개)");
     }
 
     // (에러 방지용 빈 함수들)
