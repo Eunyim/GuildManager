@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 public class BattleUnit : MonoBehaviour
 {
@@ -17,11 +18,19 @@ public class BattleUnit : MonoBehaviour
 
     [Header("UI & 이펙트")]
     public GameObject hpBarPrefab;
-    private HPBar myHPBar; // ★ 생성된 HP바를 기억할 변수
+    private HPBar myHPBar; 
+
+    [Header("특성 시스템")]
+    public List<TraitData> activeTraits = new List<TraitData>();
+    private float baseAttackPower; 
+    protected bool isCoward = false; 
 
     protected BattleUnit target; 
     protected Animator anim;     
     protected float lastAttackTime; 
+
+    [Header("AI 설정")]
+    public float aggro = 10f; // 어그로 수치 (전사는 프리팹에서 높게 설정)
 
     public void Initialize(Adventurer data)
     {
@@ -30,6 +39,12 @@ public class BattleUnit : MonoBehaviour
         attackPower = data.atk;
         currentMp = 0; 
         name = $"Unit_{data.name}";
+
+        if (data.traits != null)
+        {
+            activeTraits = data.traits;
+        }
+        baseAttackPower = attackPower;
     }
 
     protected virtual void Start()
@@ -37,50 +52,180 @@ public class BattleUnit : MonoBehaviour
         if (currentHp <= 0) currentHp = maxHp;
         anim = GetComponent<Animator>();
         
-        // 타겟 찾기
-        FindNearestTarget();
+        // ★ 구형 AI 대신 새로운 통합 타겟 찾기 실행
+        SearchForTarget();
         
-        // ★ HP바 생성 및 연결
         CreateHPBar();
     }
 
     protected virtual void Update()
     {
-        // 1. UI 갱신 (매 프레임 체력/마나 동기화)
+        if (isDead) return;
+
+        CheckTraits(); // 실시간 특성 체크
+
+        // 1. UI 갱신
         if (myHPBar != null)
         {
             myHPBar.UpdateBar(currentHp, maxHp, currentMp, maxMp);
         }
 
-        // 2. 타겟이 없거나 죽었으면 다시 찾기
+        // 2. 타겟이 없거나 죽었으면 다시 찾기 (새로운 타겟팅 함수 호출)
         if (target == null || target.currentHp <= 0)
         {
-            FindNearestTarget();
+            SearchForTarget();
             return; 
         }
 
-        // 3. 거리 계산
+        // 3. 거리 계산 및 이동/공격 판별
         float distance = Vector3.Distance(transform.position, target.transform.position);
 
-        // 4. 이동 vs 공격 결정
         if (distance <= attackRange)
         {
-            // 사거리 안이면 멈추고 공격
             StopAndAttack();
         }
         else
         {
-            // 사거리 밖이면 이동
             MoveToTarget();
         }
     }
 
+    // ★ [추가] 배틀 매니저에서 적 리스트를 가져와 새로운 FindTarget에 넘겨주는 연결 함수
+    protected void SearchForTarget()
+    {
+        // 내가 플레이어면 "Enemy" 태그를 찾고, 적이면 "Player" 태그를 찾음
+        string targetTag = gameObject.CompareTag("Player") ? "Enemy" : "Player";
+        GameObject[] targetObjects = GameObject.FindGameObjectsWithTag(targetTag);
+
+        List<BattleUnit> targetList = new List<BattleUnit>();
+        foreach (GameObject obj in targetObjects)
+        {
+            BattleUnit unit = obj.GetComponent<BattleUnit>();
+            if (unit != null) targetList.Add(unit);
+        }
+
+        FindTarget(targetList);
+    }
+
+    // ★ 통합된 새로운 타겟 탐색 함수 (오직 이 녀석 하나만 존재해야 합니다!)
+    protected virtual void FindTarget(List<BattleUnit> enemyList)
+    {
+        // 1. [특성] 내가 '겁쟁이'라면? 적을 찾지 않고 튼튼한 아군 뒤로 숨는다!
+        if (isCoward && BattleManager.Instance != null)
+        {
+            target = FindStrongestAlly();
+            return; 
+        }
+
+        // 2. [기본 AI] 적 탐색 (어그로 시스템 적용)
+        if (enemyList == null || enemyList.Count == 0) return;
+
+        float bestScore = Mathf.Infinity;
+        BattleUnit bestTarget = null;
+
+        foreach (BattleUnit enemy in enemyList)
+        {
+            if (enemy == null || enemy.currentHp <= 0) continue;
+
+            float distance = Vector2.Distance(transform.position, enemy.transform.position);
+            float score = distance - enemy.aggro; // 어그로 적용
+
+            if (score < bestScore)
+            {
+                bestScore = score;
+                bestTarget = enemy;
+            }
+        }
+        target = bestTarget;
+    }
+
+    // -------------------------------------------------------------
+    // 아래는 이동, 공격, 특성 등 기능 함수들입니다.
+    // -------------------------------------------------------------
+
+    private void CheckTraits()
+    {
+        attackPower = baseAttackPower;
+        isCoward = false;
+
+        foreach (TraitData trait in activeTraits)
+        {
+            if (trait == null) continue;
+
+            bool conditionMet = false;
+
+            switch (trait.conditionType)
+            {
+                case TraitConditionType.Always:
+                    conditionMet = true; 
+                    break;
+                case TraitConditionType.NoAllyNearby:
+                    conditionMet = CheckNoAllyNearby(trait.conditionValue);
+                    break;
+            }
+
+            if (conditionMet)
+            {
+                ApplyTraitEffect(trait);
+            }
+        }
+    }
+
+    private bool CheckNoAllyNearby(float radius)
+    {
+        string myTag = gameObject.tag; // 나와 같은 편 태그
+        GameObject[] allyObjects = GameObject.FindGameObjectsWithTag(myTag);
+
+        foreach (GameObject obj in allyObjects) 
+        {
+            BattleUnit ally = obj.GetComponent<BattleUnit>();
+            if (ally == null || ally.isDead || ally == this) continue; 
+
+            float dist = Vector2.Distance(transform.position, ally.transform.position);
+            if (dist <= radius) return false; // 반경 내에 아군 발견!
+        }
+        return true;
+    }
+
+    private void ApplyTraitEffect(TraitData trait)
+    {
+        switch (trait.effectType)
+        {
+            case TraitEffectType.ModifyAttackPower:
+                attackPower = baseAttackPower * trait.effectValue; 
+                break;
+            case TraitEffectType.ChangeAI_HideBehindAlly:
+                isCoward = true; 
+                break;
+        }
+    }
+
+    private BattleUnit FindStrongestAlly()
+    {
+        BattleUnit strongest = null;
+        float maxHealth = -1;
+
+        string myTag = gameObject.tag; // 나와 같은 편 태그
+        GameObject[] allyObjects = GameObject.FindGameObjectsWithTag(myTag);
+
+        foreach (GameObject obj in allyObjects)
+        {
+            BattleUnit ally = obj.GetComponent<BattleUnit>();
+            if (ally == null || ally.isDead || ally == this) continue;
+
+            if (ally.maxHp > maxHealth)
+            {
+                maxHealth = ally.maxHp;
+                strongest = ally;
+            }
+        }
+        return strongest != null ? strongest : this;
+    }
+
     protected virtual void MoveToTarget()
     {
-        // ★ 서로 밀지 않게 하려면 Rigidbody 설정을 건드려야 함 (아래 설명 참조)
         transform.position = Vector3.MoveTowards(transform.position, target.transform.position, moveSpeed * Time.deltaTime);
 
-        // 방향 전환
         if (target.transform.position.x < transform.position.x) 
             transform.localScale = new Vector3(-1, 1, 1); 
         else 
@@ -89,7 +234,6 @@ public class BattleUnit : MonoBehaviour
 
     protected void StopAndAttack()
     {
-        // 공격 쿨타임 체크
         if (Time.time >= lastAttackTime + attackCooldown)
         {
             if (currentMp >= maxMp)
@@ -106,15 +250,12 @@ public class BattleUnit : MonoBehaviour
 
     protected virtual void Attack()
     {
-        // 근접 공격인 경우 여기서 바로 데미지
-        // 원거리(투사체)인 경우 자식 클래스(Archer/Mage)에서 override 함
         if (target != null) 
         {
             target.TakeDamage(attackPower);
             Debug.Log($"⚔️ {name}의 공격! -> {target.name} (HP: {target.currentHp})");
         }
 
-        // MP 회복
         currentMp += mpRegenOnHit;
         if (currentMp > maxMp) currentMp = maxMp;
     }
@@ -129,7 +270,6 @@ public class BattleUnit : MonoBehaviour
     {
         currentHp -= damage;
         
-        // 데미지 텍스트 (옵션)
         if (BattleManager.Instance != null)
         {
             BattleManager.Instance.ShowDamageText(transform.position, damage, false);
@@ -138,11 +278,13 @@ public class BattleUnit : MonoBehaviour
         if (currentHp <= 0) Die();
     }
 
+    // 체력이 0이 되었을 때의 처리 (isDead 프로퍼티 역할 수행)
+    public bool isDead { get { return currentHp <= 0; } }
+
     protected virtual void Die()
     {
         Debug.Log($"💀 {name} 사망!");
         
-        // 죽으면 HP바도 같이 삭제
         if (myHPBar != null) Destroy(myHPBar.gameObject);
 
         if (BattleManager.Instance != null)
@@ -153,35 +295,11 @@ public class BattleUnit : MonoBehaviour
         Destroy(gameObject);
     }
 
-    void FindNearestTarget()
-    {
-        string targetTag = gameObject.CompareTag("Player") ? "Enemy" : "Player";
-        GameObject[] enemies = GameObject.FindGameObjectsWithTag(targetTag);
-        
-        float shortestDistance = Mathf.Infinity;
-        GameObject nearestEnemy = null;
-
-        foreach (GameObject enemy in enemies)
-        {
-            float d = Vector3.Distance(transform.position, enemy.transform.position);
-            if (d < shortestDistance)
-            {
-                shortestDistance = d;
-                nearestEnemy = enemy;
-            }
-        }
-
-        if (nearestEnemy != null) target = nearestEnemy.GetComponent<BattleUnit>();
-    }
-
     void CreateHPBar()
     {
         if (hpBarPrefab == null) return;
         
-        // 유닛의 자식으로 생성해서 따라다니게 함
         GameObject barObj = Instantiate(hpBarPrefab, transform); 
-        
-        // ★ 생성된 스크립트를 가져와서 변수에 저장!
         myHPBar = barObj.GetComponent<HPBar>();
         if (myHPBar != null) myHPBar.Setup(this);
     }

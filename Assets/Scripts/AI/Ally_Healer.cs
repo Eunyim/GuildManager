@@ -12,6 +12,9 @@ public class Ally_Healer : BattleUnit
         attackPower = 10;   // 딜은 약함
         mpRegenOnHit = 25;  // 4대 때리면 힐 가능
 
+        // ★ 새로 추가되는 AI 스탯 (적의 어그로를 덜 끌도록 아주 낮게 설정)
+        aggro = 5f;
+
         base.Start();
     }
 
@@ -39,8 +42,6 @@ public class Ally_Healer : BattleUnit
             targetAlly.currentHp += healAmount;
             if (targetAlly.currentHp > targetAlly.maxHp) 
                 targetAlly.currentHp = targetAlly.maxHp;
-
-           
 
             Debug.Log($"{targetAlly.name}를 {healAmount}만큼 치유!");
         }

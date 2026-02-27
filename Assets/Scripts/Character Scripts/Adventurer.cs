@@ -44,6 +44,7 @@ public class Adventurer
     public JobType job;      // 직업
     public RankType rank;    // 등급
     public TraitType trait; // 성격
+    public List<TraitData> traits = new List<TraitData>();
     
     // 능력치
 

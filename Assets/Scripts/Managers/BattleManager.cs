@@ -39,6 +39,10 @@ public class BattleManager : MonoBehaviour
     [Header("던전 오브젝트")]
     public GameObject treasureChestPrefab; // ★ 추가: 보물상자 프리팹
 
+    [Header("아군 스폰 위치 설정")]
+    public Transform[] frontSpawnPoints; // 전위 스폰 좌표들 (앞줄)
+    public Transform[] backSpawnPoints;  // 후위 스폰 좌표들 (뒷줄)
+
     // (에러 방지용: 안 써도 둠)
     public GameObject damageTextPrefab; 
 
@@ -66,61 +70,103 @@ public class BattleManager : MonoBehaviour
     // --- 1. 아군 소환 로직 (GameManager 연동) ---
     void SetupAllyParty()
     {
-        if (GameManager.Instance == null || GameManager.Instance.currentDispatchParty == null) 
+       if (GameManager.Instance == null || GameManager.Instance.currentDispatchParty == null) 
+    {
+        Debug.LogWarning("게임 매니저나 파티 정보가 없습니다. 테스트 모드일 수 있습니다.");
+        return;
+    }
+
+    List<Adventurer> members = GameManager.Instance.currentDispatchParty.members;
+
+    // ★ 위치 잡기 변수들 (전위와 후위를 따로 셉니다)
+    int frontIndex = 0;
+    int backIndex = 0;
+    int allyCount = 0;
+
+    foreach (Adventurer member in members)
+    {
+        GameObject prefabToSpawn = null;
+        bool isFrontLine = false; // ★ 이 캐릭터가 앞줄에 서야 하는지 판별하는 변수
+
+        // 직업에 맞는 프리팹 선택 및 전위/후위 판별
+        switch (member.job)
         {
-            Debug.LogWarning("게임 매니저나 파티 정보가 없습니다. 테스트 모드일 수 있습니다.");
-            return;
+            case JobType.Warrior: 
+                prefabToSpawn = warriorPrefab; 
+                isFrontLine = true;  // 전사는 앞줄
+                break;
+            case JobType.Rogue:   
+                prefabToSpawn = roguePrefab; 
+                isFrontLine = true;  // 도적은 앞줄
+                break;
+            case JobType.Archer:  
+                prefabToSpawn = archerPrefab; 
+                isFrontLine = false; // 궁수는 뒷줄
+                break;
+            case JobType.Mage:    
+                prefabToSpawn = magePrefab; 
+                isFrontLine = false; // 법사는 뒷줄
+                break;
+            case JobType.Healer:  
+                prefabToSpawn = healerPrefab; 
+                isFrontLine = false; // 힐러는 뒷줄
+                break;
+            default:              
+                prefabToSpawn = warriorPrefab; 
+                isFrontLine = true;
+                break;
         }
 
-        List<Adventurer> members = GameManager.Instance.currentDispatchParty.members;
+        if (prefabToSpawn == null) continue;
 
-        // 위치 잡기 변수들
-        int index = 0;
-        float spacing = 2.0f; 
-
-        foreach (Adventurer member in members)
-        {
-            GameObject prefabToSpawn = null;
-
-            // 직업에 맞는 프리팹 선택
-            switch (member.job)
-            {
-                case JobType.Warrior: prefabToSpawn = warriorPrefab; break;
-                case JobType.Archer:  prefabToSpawn = archerPrefab; break;
-                case JobType.Mage:    prefabToSpawn = magePrefab; break;
-                case JobType.Rogue:   prefabToSpawn = roguePrefab; break;
-                case JobType.Healer:  prefabToSpawn = healerPrefab; break;
-                default:              prefabToSpawn = warriorPrefab; break;
-            }
-
-            if (prefabToSpawn == null) continue;
-
-            // 소환!
-            GameObject newUnit = Instantiate(prefabToSpawn);
-            
-            // 이름 및 태그 설정
-            newUnit.name = $"Unit_{member.name}";
-            newUnit.tag = "Player";
-
-            // 위치 배치 (약간의 랜덤성 추가)
-            float randomX = Random.Range(0f, 0.5f);
-            float randomY = Random.Range(-1.5f, 1.5f);
-            float xPos = -index * spacing - randomX;
-            
-            newUnit.transform.position = playerSpawnPoint.position + new Vector3(xPos, randomY, 0);
-
-            // 스탯 주입
-            BattleUnit unitScript = newUnit.GetComponent<BattleUnit>();
-            if (unitScript != null)
-            {
-                unitScript.Initialize(member); 
-            }
-
-            index++;
-            allyCount++;
-        }
+        // 소환!
+        GameObject newUnit = Instantiate(prefabToSpawn);
         
-        Debug.Log($"⚔️ 아군 {allyCount}명 소환 완료!");
+        // 이름 및 태그 설정
+        newUnit.name = $"Unit_{member.name}";
+        newUnit.tag = "Player";
+
+        // ★ 위치 배치 로직
+        Transform targetSpawnPoint = null;
+
+        // 앞줄 직업이고, 앞줄 스폰 지점에 자리가 남아있다면
+        if (isFrontLine && frontSpawnPoints != null && frontIndex < frontSpawnPoints.Length)
+        {
+            targetSpawnPoint = frontSpawnPoints[frontIndex];
+            frontIndex++;
+        }
+        // 뒷줄 직업이고, 뒷줄 스폰 지점에 자리가 남아있다면
+        else if (!isFrontLine && backSpawnPoints != null && backIndex < backSpawnPoints.Length)
+        {
+            targetSpawnPoint = backSpawnPoints[backIndex];
+            backIndex++;
+        }
+        else
+        {
+            // 만약 유니티 에디터에서 스폰 포인트를 덜 만들었을 때를 대비한 예비(Fallback) 지점
+            targetSpawnPoint = playerSpawnPoint; 
+        }
+
+        // 위치 배치 (캐릭터들이 완전히 겹치지 않게 아주 약간의 랜덤성만 추가)
+        float randomX = Random.Range(-0.2f, 0.2f);
+        float randomY = Random.Range(-0.2f, 0.2f);
+        
+        if (targetSpawnPoint != null)
+        {
+            newUnit.transform.position = targetSpawnPoint.position + new Vector3(randomX, randomY, 0);
+        }
+
+        // 스탯 주입 (유저님이 짜두신 기존 로직 완벽 유지)
+        BattleUnit unitScript = newUnit.GetComponent<BattleUnit>();
+        if (unitScript != null)
+        {
+            unitScript.Initialize(member); 
+        }
+
+        allyCount++;
+    }
+    
+    Debug.Log($"⚔️ 아군 {allyCount}명 소환 완료! (전위: {frontIndex}명, 후위: {backIndex}명)");
     }
 
     // --- 2. 스테이지 진행 코루틴 (적 소환) ---
