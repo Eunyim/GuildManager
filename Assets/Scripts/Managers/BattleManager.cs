@@ -43,6 +43,10 @@ public class BattleManager : MonoBehaviour
     public Transform[] frontSpawnPoints; // 전위 스폰 좌표들 (앞줄)
     public Transform[] backSpawnPoints;  // 후위 스폰 좌표들 (뒷줄)
 
+    [Header("던전 진행")]
+    public GameObject chestPrefab; // 아까 만든 보물상자 프리팹을 인스펙터에서 끌어다 넣으세요!
+    private bool isRoomCleared = false; // 방 클리어 여부
+
     // (에러 방지용: 안 써도 둠)
     public GameObject damageTextPrefab; 
 
@@ -243,6 +247,12 @@ public class BattleManager : MonoBehaviour
                 SpawnTreasureChest(); // ★ 바로 넘어가지 말고 상자 소환!
             }
         }
+
+        if (!isPlayerSide) // 죽은 게 적 몬스터라면?
+        {
+            // 몬스터 오브젝트가 완전히 파괴(Destroy)될 시간을 0.1초 주고 전멸을 체크합니다.
+            Invoke("CheckRoomClear", 0.1f); 
+        }
     }
 
     void SpawnTreasureChest()
@@ -327,7 +337,97 @@ public class BattleManager : MonoBehaviour
         Debug.Log($"🎒 가방에 챙김: {item.itemName} (현재 가방에 총 {earnedItems.Count}개)");
     }
 
+    private void CheckRoomClear()
+    {
+        if (isRoomCleared) return;
+
+        // 맵에 'Enemy' 태그를 가진 오브젝트가 남아있는지 확인
+        GameObject[] enemies = GameObject.FindGameObjectsWithTag("Enemy");
+        
+        if (enemies.Length == 0) // 남은 적이 0명이다! (방 클리어!)
+        {
+            isRoomCleared = true;
+            Debug.Log("🎉 적 전멸! 보물상자 소환!");
+
+            // 1. 맵 중앙(또는 적절한 위치)에 보물상자 소환
+            Vector3 chestSpawnPos = new Vector3(0, 0, 0); 
+            GameObject chest = Instantiate(chestPrefab, chestSpawnPos, Quaternion.identity);
+
+            // 2. 살아남은 아군 중 한 명에게 상자를 열러 가라고 명령!
+            OrderToLoot(chest.transform);
+        }
+    }
+
+    // ★ 상자 열러 갈 사람 지정하는 함수
+    private void OrderToLoot(Transform chestTransform)
+    {
+        GameObject[] allies = GameObject.FindGameObjectsWithTag("Player");
+        if (allies.Length > 0)
+        {
+            // (나중에는 도적을 우선순위로 보내는 로직을 짤 수도 있습니다)
+            // 일단은 살아남은 아군 중 첫 번째 캐릭터를 보냅니다.
+            BattleUnit looter = allies[0].GetComponent<BattleUnit>();
+            if (looter != null)
+            {
+                looter.CommandLoot(chestTransform);
+            }
+        }
+    }
+
     // (에러 방지용 빈 함수들)
     public void ShowDamageText(Vector3 pos, float damage, bool crit) { }
     public void ShowHealText(Vector3 pos, float amount) { }
+
+    // ★ 도주 버튼을 눌렀을 때 실행될 함수
+    public void OnClickFleeButton()
+    {
+        Debug.Log("🚨 [긴급 도주] 매니저 권한으로 전투를 강제 종료합니다!");
+
+        // 1. 맵에 살아있는 모든 아군의 행동(AI)을 강제로 정지시킵니다.
+        GameObject[] allies = GameObject.FindGameObjectsWithTag("Player");
+        foreach (GameObject allyObj in allies)
+        {
+            BattleUnit unit = allyObj.GetComponent<BattleUnit>();
+            if (unit != null)
+            {
+                // (Phase 3에서 여기에 캐릭터별 남은 체력(HP)을 저장하는 로직이 들어갈 자리입니다)
+                unit.enabled = false; // 스크립트를 꺼버려서 멈추게 함
+            }
+        }
+
+        // 2. 적들도 멈추게 합니다.
+        GameObject[] enemies = GameObject.FindGameObjectsWithTag("Enemy");
+        foreach (GameObject enemyObj in enemies)
+        {
+            MonoBehaviour[] scripts = enemyObj.GetComponents<MonoBehaviour>();
+            foreach (MonoBehaviour script in scripts)
+            {
+                script.enabled = false; 
+            }
+        }
+
+        // 3. 1초 뒤에 로비 씬으로 도망칩니다! (코루틴 사용)
+        StartCoroutine(EscapeToLobby());
+    }
+
+    private System.Collections.IEnumerator EscapeToLobby()
+    {
+        yield return new WaitForSeconds(1.0f); // 1초 대기 (도망치는 연출이나 암전 효과를 넣기 좋은 타이밍)
+        
+        // ★ 괄호 안의 "LobbyScene"을 유저님의 실제 로비 씬 이름으로 바꿔주세요!
+        SceneManager.LoadScene("LobbyScene"); 
+    }
+
+    public void OnChestOpened()
+    {
+        Debug.Log("✅ 상자 파밍 완료! 다음 방으로 이동합니다...");
+        
+        isRoomCleared = false; 
+
+        // ★ 에러 해결: 스테이지 번호를 1 올리고, 괄호 안에 그 숫자를 넣어줍니다!
+        // (만약 유저님이 원래 쓰시던 현재 스테이지 변수 이름이 currentStageIndex가 아니라면, 
+        // stageIndex, currentRoom 등 원래 쓰시던 이름으로 바꿔주세요!)
+        currentStageIndex++; 
+        StartCoroutine(StartStageCoroutine(currentStageIndex));
+    }
 }

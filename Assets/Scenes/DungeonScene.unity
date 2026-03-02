@@ -1038,6 +1038,7 @@ MonoBehaviour:
   backSpawnPoints:
   - {fileID: 998443593}
   - {fileID: 1295354396}
+  chestPrefab: {fileID: 4098219576457141253, guid: 32450f4e72cd0b541a5766c644e31d66, type: 3}
   damageTextPrefab: {fileID: 0}
 --- !u!4 &1345272940
 Transform:

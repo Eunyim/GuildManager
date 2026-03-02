@@ -32,6 +32,10 @@ public class BattleUnit : MonoBehaviour
     [Header("AI 설정")]
     public float aggro = 10f; // 어그로 수치 (전사는 프리팹에서 높게 설정)
 
+    [Header("파밍(Looting) 시스템")]
+    private Transform chestTarget; // 열어야 할 보물상자 위치
+    private bool isLooting = false; // 지금 파밍하러 가는 중인가?
+
     public void Initialize(Adventurer data)
     {
         maxHp = data.hp;
@@ -61,6 +65,21 @@ public class BattleUnit : MonoBehaviour
     protected virtual void Update()
     {
         if (isDead) return;
+
+        // ★ [추가된 파밍 AI] 상자를 향해 걸어가는 상태라면?
+        if (isLooting && chestTarget != null)
+        {
+            // 상자 쪽으로 뚜벅뚜벅 걷기
+            transform.position = Vector3.MoveTowards(transform.position, chestTarget.position, moveSpeed * Time.deltaTime);
+            
+            // 방향 전환 (상자 쪽 바라보기)
+            if (chestTarget.position.x < transform.position.x) 
+                transform.localScale = new Vector3(-1, 1, 1); 
+            else 
+                transform.localScale = new Vector3(1, 1, 1);
+            
+            return; // 파밍 중일 때는 아래의 전투 로직(CheckTraits, FindTarget 등)을 아예 무시합니다!
+        }
 
         CheckTraits(); // 실시간 특성 체크
 
@@ -302,5 +321,14 @@ public class BattleUnit : MonoBehaviour
         GameObject barObj = Instantiate(hpBarPrefab, transform); 
         myHPBar = barObj.GetComponent<HPBar>();
         if (myHPBar != null) myHPBar.Setup(this);
+    }
+
+    // 매니저가 "상자 열러 가!" 하고 명령할 때 호출되는 함수
+    public void CommandLoot(Transform chest)
+    {
+        isLooting = true;
+        chestTarget = chest;
+        target = null; // 전투 타겟 초기화 (싸움 끝!)
+        Debug.Log($"🏃 {name} : 내가 상자 열러 갈게!");
     }
 }
