@@ -191,6 +191,8 @@ public class BattleManager : MonoBehaviour
         // 플레이어가 숨 돌릴 시간 (2초 대기)
         yield return new WaitForSeconds(2.0f);
 
+        ResetAllyPositions();
+
         // 적 소환
         SpawnEnemies(dungeonStages[stageIndex]);
         isBattleActive = true;
@@ -239,34 +241,32 @@ public class BattleManager : MonoBehaviour
         else // 적군 사망
         {
             enemyCount--;
-            if (enemyCount <= 0)
+            
+            // ★ 핵심 버그 픽스: 적이 모두 죽었고(<=0), 아직 방 클리어 처리가 안 되었다면(!isRoomCleared) 딱 한 번만 실행!
+            if (enemyCount <= 0 && !isRoomCleared)
             {
-                Debug.Log("✅ 스테이지 클리어! 잠시 후 다음 방으로 이동합니다...");
-                isBattleActive = false;
+                isRoomCleared = true;   // 자물쇠를 닫아서 광역기로 인한 중복 실행 완벽 차단!
+                isBattleActive = false; // 전투 종료 처리
                 
-                SpawnTreasureChest(); // ★ 바로 넘어가지 말고 상자 소환!
+                Debug.Log("🎉 적 전멸! 보물상자 소환!");
+                
+                SpawnTreasureChest(); // ★ 상자 소환 함수 호출!
             }
         }
-
-        if (!isPlayerSide) // 죽은 게 적 몬스터라면?
-        {
-            // 몬스터 오브젝트가 완전히 파괴(Destroy)될 시간을 0.1초 주고 전멸을 체크합니다.
-            Invoke("CheckRoomClear", 0.1f); 
-        }
+        
+        // ❌ 이전에 있던 Invoke("CheckRoomClear", 0.1f); 부분은 완전히 삭제되었습니다! ❌
     }
 
     void SpawnTreasureChest()
     {
-        if (treasureChestPrefab != null)
-        {
-            // 화면 중앙쯤에 상자 생성
-            Instantiate(treasureChestPrefab, new Vector3(0, -1, 0), Quaternion.identity);
-        }
-        else
-        {
-            // 프리팹 안 넣었으면 그냥 바로 다음 스테이지로
-            GoToNextStage(); 
-        }
+      // ★ X좌표를 3.0f (또는 4.0f) 정도로 줘서 화면 우측(적 진영)에 상자가 나오게 합니다.
+        // Y좌표는 유저님 맵에 맞게 바닥 쪽에 맞춰주시면 더 좋습니다.
+        Vector3 chestSpawnPos = new Vector3(4.0f, 0f, 0f); 
+        
+        GameObject chest = Instantiate(chestPrefab, chestSpawnPos, Quaternion.identity);
+
+        // 살아남은 아군 중 한 명에게 상자를 열러 가라고 명령!
+        OrderToLoot(chest.transform);
     }
 
     // ★ 상자를 열었을 때 호출될 함수 (기존 StartStageCoroutine 부르는 역할)
@@ -412,22 +412,85 @@ public class BattleManager : MonoBehaviour
 
     private System.Collections.IEnumerator EscapeToLobby()
     {
-        yield return new WaitForSeconds(1.0f); // 1초 대기 (도망치는 연출이나 암전 효과를 넣기 좋은 타이밍)
+       yield return new WaitForSeconds(1.0f); // 1초 대기 (도망치는 연출)
         
-        // ★ 괄호 안의 "LobbyScene"을 유저님의 실제 로비 씬 이름으로 바꿔주세요!
-        SceneManager.LoadScene("LobbyScene"); 
+        // ★ [핵심 버그 픽스] 로비로 씬을 넘기기 전에 파티 상태를 'Idle(대기)'로 초기화!
+        if (GameManager.Instance != null && GameManager.Instance.currentDispatchParty != null)
+        {
+            // 1. 해당 파티의 상태를 다시 '대기' 상태로 바꿔줍니다.
+            GameManager.Instance.currentDispatchParty.state = PartyState.Idle; 
+            
+            // 2. 매니저의 머릿속에서 '현재 파견나간 파티'를 지워버립니다.
+            GameManager.Instance.currentDispatchParty = null; 
+            
+            Debug.Log("🏠 파티가 무사히 길드로 귀환하여 대기 상태로 전환되었습니다.");
+        }
+
+        // 로비 씬으로 이동! (씬 이름 확인 필수)
+        SceneManager.LoadScene("LobbyScene");
     }
 
     public void OnChestOpened()
     {
         Debug.Log("✅ 상자 파밍 완료! 다음 방으로 이동합니다...");
         
-        isRoomCleared = false; 
+        // ★ 핵심 버그 픽스: 예약되어 있던 잉여 CheckRoomClear 호출을 모두 취소합니다!
+        CancelInvoke("CheckRoomClear"); 
 
-        // ★ 에러 해결: 스테이지 번호를 1 올리고, 괄호 안에 그 숫자를 넣어줍니다!
-        // (만약 유저님이 원래 쓰시던 현재 스테이지 변수 이름이 currentStageIndex가 아니라면, 
-        // stageIndex, currentRoom 등 원래 쓰시던 이름으로 바꿔주세요!)
+        isRoomCleared = false; 
+        
+        // (유저님의 변수명에 맞게 currentStageIndex를 올려주고 코루틴 실행)
         currentStageIndex++; 
-        StartCoroutine(StartStageCoroutine(currentStageIndex));
+        StartCoroutine(StartStageCoroutine(currentStageIndex)); 
+    }
+
+    // ★ 다음 방으로 넘어갈 때 아군 위치를 진형에 맞게 재배치하는 함수
+    private void ResetAllyPositions()
+    {
+        GameObject[] allyObjects = GameObject.FindGameObjectsWithTag("Player");
+        List<BattleUnit> survivingAllies = new List<BattleUnit>();
+
+        foreach (GameObject obj in allyObjects)
+        {
+            BattleUnit unit = obj.GetComponent<BattleUnit>();
+            if (unit != null && !unit.isDead)
+            {
+                survivingAllies.Add(unit);
+                unit.ResetState(); // 1단계에서 만든 상태 초기화 실행!
+            }
+        }
+
+        // ★ 핵심: 체력(maxHp)이 높은 순서대로 내림차순 정렬 (탱커가 무조건 1순위)
+        survivingAllies.Sort((a, b) => b.maxHp.CompareTo(a.maxHp));
+
+        int frontIndex = 0;
+        int backIndex = 0;
+
+        foreach (BattleUnit unit in survivingAllies)
+        {
+            Transform targetPoint = null;
+
+            // 전위에 자리가 남아있으면 앞줄로, 다 찼으면 뒷줄로 배정
+            if (frontSpawnPoints != null && frontIndex < frontSpawnPoints.Length)
+            {
+                targetPoint = frontSpawnPoints[frontIndex];
+                frontIndex++;
+            }
+            else if (backSpawnPoints != null && backIndex < backSpawnPoints.Length)
+            {
+                targetPoint = backSpawnPoints[backIndex];
+                backIndex++;
+            }
+
+            // 위치로 텔레포트 (살짝 겹치지 않게 랜덤값 추가)
+            if (targetPoint != null)
+            {
+                float randomX = Random.Range(-0.2f, 0.2f);
+                float randomY = Random.Range(-0.2f, 0.2f);
+                unit.transform.position = targetPoint.position + new Vector3(randomX, randomY, 0);
+            }
+        }
+
+        Debug.Log("🔄 다음 방 진입! 아군 진형(위치) 재배치 완료!");
     }
 }

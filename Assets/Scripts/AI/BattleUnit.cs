@@ -331,4 +331,14 @@ public class BattleUnit : MonoBehaviour
         target = null; // 전투 타겟 초기화 (싸움 끝!)
         Debug.Log($"🏃 {name} : 내가 상자 열러 갈게!");
     }
+
+    // ★ 다음 스테이지 진입 시 상태를 초기화하는 함수
+    public void ResetState()
+    {
+        isLooting = false; // 상자 열러 가던 상태 해제
+        target = null;     // 타겟 초기화
+        
+        // 다시 오른쪽(적 진영)을 바라보게 만듭니다
+        transform.localScale = new Vector3(1, 1, 1);
+    }
 }
