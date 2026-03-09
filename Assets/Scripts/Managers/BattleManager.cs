@@ -292,13 +292,13 @@ public class BattleManager : MonoBehaviour
     // --- 4. 게임 종료 및 UI ---
     public void GameOver(bool isWin)
     {
-        if (isWin)
+       if (isWin) { if (victoryPanel != null) victoryPanel.SetActive(true); }
+        else       { if (defeatPanel != null) defeatPanel.SetActive(true); }
+
+        if (GameManager.Instance != null)
         {
-            if (victoryPanel != null) victoryPanel.SetActive(true);
-        }
-        else
-        {
-            if (defeatPanel != null) defeatPanel.SetActive(true);
+            // ★ lootBag을 earnedItems로 변경!
+            GameManager.Instance.AddLootToGuild(earnedItems, isWin); 
         }
     }
 
@@ -318,6 +318,8 @@ public class BattleManager : MonoBehaviour
             // (던전을 클리어해야 돈을 준다면 bool 플래그가 필요하지만, 일단 기존 로직 존중)
             GameManager.Instance.AddGold(reward);
 
+            SyncAdventurerStatus();
+
             // 파티 상태 해제 (중요!)
             if (GameManager.Instance.currentDispatchParty != null)
                 GameManager.Instance.currentDispatchParty.state = PartyState.Idle;
@@ -333,7 +335,7 @@ public class BattleManager : MonoBehaviour
 
     public void AddItemToLootBag(MonsterDropData item)
     {
-        earnedItems.Add(item);
+      earnedItems.Add(item); // 낱개 가방에 하나씩 담기
         Debug.Log($"🎒 가방에 챙김: {item.itemName} (현재 가방에 총 {earnedItems.Count}개)");
     }
 
@@ -412,17 +414,18 @@ public class BattleManager : MonoBehaviour
 
     private System.Collections.IEnumerator EscapeToLobby()
     {
-       yield return new WaitForSeconds(1.0f); // 1초 대기 (도망치는 연출)
+      yield return new WaitForSeconds(1.0f); 
         
-        // ★ [핵심 버그 픽스] 로비로 씬을 넘기기 전에 파티 상태를 'Idle(대기)'로 초기화!
         if (GameManager.Instance != null && GameManager.Instance.currentDispatchParty != null)
         {
-            // 1. 해당 파티의 상태를 다시 '대기' 상태로 바꿔줍니다.
             GameManager.Instance.currentDispatchParty.state = PartyState.Idle; 
+
+            SyncAdventurerStatus();
             
-            // 2. 매니저의 머릿속에서 '현재 파견나간 파티'를 지워버립니다.
-            GameManager.Instance.currentDispatchParty = null; 
-            
+            // ★ lootBag을 earnedItems로 변경! (false는 도주/패배를 의미)
+            GameManager.Instance.AddLootToGuild(earnedItems, false); 
+
+            GameManager.Instance.currentDispatchParty = null;
             Debug.Log("🏠 파티가 무사히 길드로 귀환하여 대기 상태로 전환되었습니다.");
         }
 
@@ -492,5 +495,67 @@ public class BattleManager : MonoBehaviour
         }
 
         Debug.Log("🔄 다음 방 진입! 아군 진형(위치) 재배치 완료!");
+    }
+
+    // ★ 전투 종료 직전, 맵에 있는 유닛들의 체력을 로비 데이터로 덮어씌우는 함수
+    private void SyncAdventurerStatus()
+    {
+        if (GameManager.Instance == null || GameManager.Instance.currentDispatchParty == null) return;
+
+        GameObject[] allies = GameObject.FindGameObjectsWithTag("Player");
+        
+        // 지울 사람들을 임시로 담아둘 '살생부' 리스트 (리스트를 돌면서 바로 지우면 에러가 나기 때문)
+        List<Adventurer> deadAdventurers = new List<Adventurer>();
+
+        foreach (Adventurer member in GameManager.Instance.currentDispatchParty.members)
+        {
+            string unitName = $"Unit_{member.name}";
+            GameObject unitObj = null;
+            
+            foreach(GameObject obj in allies)
+            {
+                if(obj.name == unitName) { unitObj = obj; break; }
+            }
+
+            if (unitObj != null)
+            {
+                BattleUnit unitScript = unitObj.GetComponent<BattleUnit>();
+                if (unitScript != null)
+                {
+                    member.currentHp = (int)unitScript.currentHp; 
+                    member.isDead = unitScript.isDead; 
+                }
+            }
+            else
+            {
+                // 맵에 아예 없으면(몬스터에게 완전히 파괴됨) 사망!
+                member.currentHp = 0;
+                member.isDead = true;
+            }
+
+            // ★ HP가 0이거나 죽었다면 살생부에 등록!
+            if (member.isDead || member.currentHp <= 0)
+            {
+                deadAdventurers.Add(member);
+            }
+        }
+        
+        // ★ [핵심] 살생부에 적힌 전사자들을 길드에서 영원히 지워버립니다.
+        foreach (Adventurer deadGuy in deadAdventurers)
+        {
+            Debug.Log($"🪦 [사망] {deadGuy.name}님이 전사하여 길드 명단에서 영구 삭제됩니다.");
+            
+            // 1. 현재 파티에서 삭제
+            GameManager.Instance.currentDispatchParty.members.Remove(deadGuy);
+            
+            // 2. 길드 전체 명단에서 삭제
+            // (⚠️ 주의: 아래의 'adventurerList'를 유저님이 GameManager에서 쓰시는 전체 모험가 리스트 이름으로 바꿔주세요! 예: myAdventurers 등)
+            if (GameManager.Instance.adventurers.Contains(deadGuy))
+            {
+                GameManager.Instance.adventurers.Remove(deadGuy);
+            }
+        }
+
+        Debug.Log("🩸 [상태 저장] 생존자 체력 동기화 완료. (전사자는 명단에서 제외됨)");
     }
 }

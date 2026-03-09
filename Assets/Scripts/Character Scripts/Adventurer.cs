@@ -54,6 +54,9 @@ public class Adventurer
     public int atk;
     public float speed;
 
+    public int currentHp;
+    public bool isDead = false;
+
     // -1이면 "대기 중(무소속)", 0, 1, 2...이면 해당 파티 소속
     public int assignedPartyIndex = -1;
     
@@ -70,6 +73,8 @@ public class Adventurer
         hp = 100;
         atk = 10;
         level = 1;
+
+        currentHp = hp;
     }
     // 성격을 한글 이름으로 반환해주는 함수
     public string GetTraitName()

@@ -56,6 +56,16 @@ public class GameManager : MonoBehaviour
 
     public List<Party> partyList = new List<Party>();
 
+    [Header("길드 인벤토리")]
+    public Dictionary<string, int> guildInventory = new Dictionary<string, int>();
+
+    [Header("결산 데이터 (로비 전달용)")]
+    public bool hasPendingResult = false; // 보여줄 결산 창이 있는가?
+    public bool lastBattleWon = false;    // 승리했는가? (도주/패배는 false)
+    public Dictionary<string, int> lastEarnedLoot = new Dictionary<string, int>(); // 방금 던전에서 얻은 템들
+
+
+
 
 
     private void Awake()
@@ -140,6 +150,35 @@ public class GameManager : MonoBehaviour
 
         Debug.Log($"[재정] 현재 골드: {gold} G");
 
+    }
+
+    // ★ 전투가 끝나고 BattleManager가 전리품을 싸들고 와서 보고하는 함수
+    public void AddLootToGuild(List<MonsterDropData> dungeonLoot, bool isWin)
+    {
+        lastEarnedLoot.Clear(); // 이전 결산 기록 지우기
+
+        foreach (MonsterDropData item in dungeonLoot)
+        {
+            // MonsterDropData 안에 있는 아이템 이름 가져오기
+            string itemName = item.itemName; 
+
+            // 1. 길드 창고에 아이템 쑤셔넣기 (있으면 +1, 없으면 새로 등록)
+            if (guildInventory.ContainsKey(itemName))
+                guildInventory[itemName]++;
+            else
+                guildInventory.Add(itemName, 1);
+
+            // 2. 결산 창에 띄워주기 위해 임시 바구니에도 담기
+            if (lastEarnedLoot.ContainsKey(itemName))
+                lastEarnedLoot[itemName]++;
+            else
+                lastEarnedLoot.Add(itemName, 1);
+        }
+
+        lastBattleWon = isWin;
+        hasPendingResult = true; // "로비야, 결산 창 띄울 준비 해!"
+        
+        Debug.Log($"📦 길드 창고 저장 완료! (총 {dungeonLoot.Count}개의 전리품을 정리했습니다)");
     }
 
 

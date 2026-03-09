@@ -366,9 +366,17 @@ public class LobbyManager : MonoBehaviour
                 return;
             }
 
+            // ★ [추가된 부분] 다친 모험가인지 체크 (현재 체력이 최대 체력보다 낮다면 무조건 부상!)
+            if (member.currentHp < member.hp) 
+            {
+                // 막지 않고 경고 문구만 출력합니다! (진정한 악덕 매니저의 길 😈)
+                Debug.LogWarning($"⚠️ [출전 경고] {member.name}님은 부상을 입은 상태입니다! (현재 HP: {member.currentHp}/{member.hp}) 그래도 파티에 강제 편성합니다.");
+                
+                // TODO: 나중에 화면 중앙에 팝업 띄우기 추가 가능
+            }
+
             currentViewingParty.members.Add(member);
 
-            // ★ [수정된 부분] 무조건 1이 아니라, 실제 파티 번호를 찾아서 넣기
             // GameManager의 파티 리스트에서 '지금 보고 있는 파티(currentViewingParty)'가 몇 번째인지 찾습니다.
             int realPartyIndex = GameManager.Instance.partyList.IndexOf(currentViewingParty);
             member.assignedPartyIndex = realPartyIndex; 
@@ -388,17 +396,6 @@ public class LobbyManager : MonoBehaviour
 
         // 상세 창도 실시간으로 갱신
         RefreshPartyDetail();
-    }
-    // 슬롯 텍스트 채우는 도우미 함수
-    void SetupSlotBasic(GameObject slot, Adventurer member)
-    {
-        TextMeshProUGUI[] texts = slot.GetComponentsInChildren<TextMeshProUGUI>();
-        if (texts.Length >= 3)
-        {
-            texts[0].text = member.name;
-            texts[1].text = member.job.ToString();
-            texts[2].text = member.rank.ToString();
-        }
     }
 
     // 팝업 닫기들
@@ -666,5 +663,17 @@ public class LobbyManager : MonoBehaviour
 
         RefreshUI();
         UpdateLobbyCharacters();
+    }
+
+    // 슬롯 텍스트 채우는 도우미 함수 (부활!)
+    void SetupSlotBasic(GameObject slot, Adventurer member)
+    {
+        TextMeshProUGUI[] texts = slot.GetComponentsInChildren<TextMeshProUGUI>();
+        if (texts.Length >= 3)
+        {
+            texts[0].text = member.name;
+            texts[1].text = member.job.ToString();
+            texts[2].text = member.rank.ToString();
+        }
     }
 }
