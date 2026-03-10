@@ -57,6 +57,8 @@ public class Adventurer
     public int currentHp;
     public bool isDead = false;
 
+    public int recoveryWeeks = 0;
+
     // -1이면 "대기 중(무소속)", 0, 1, 2...이면 해당 파티 소속
     public int assignedPartyIndex = -1;
     

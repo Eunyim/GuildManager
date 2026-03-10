@@ -104,12 +104,13 @@ public class LobbyManager : MonoBehaviour
     // UI 새로고침 함수 (돈 쓰거나 날짜 바뀔 때 호출)
     public void RefreshUI()
     {
-        // 싱글톤 GameManager가 없으면 에러 방지
-        if (GameManager.Instance == null) return;
+       if (GameManager.Instance == null) return;
 
-        guildNameText.text = GameManager.Instance.guildName;
-        goldText.text = $"{GameManager.Instance.gold:N0} G"; // 1,000 단위 쉼표
-        dayText.text = $"Day {GameManager.Instance.day}";
+        if (guildNameText != null) guildNameText.text = GameManager.Instance.guildName;
+        if (goldText != null) goldText.text = $"{GameManager.Instance.gold:N0} G"; 
+        
+        // ★ [수정] Month와 Week를 보여주게 변경! (dayText 변수를 그대로 쓰셔도 됩니다)
+        if (dayText != null) dayText.text = $"{GameManager.Instance.month}월 {GameManager.Instance.week}주차";
     }
 
     // --- 버튼 연결용 함수들 (나중에 내용 채움) ---
@@ -675,5 +676,20 @@ public class LobbyManager : MonoBehaviour
             texts[1].text = member.job.ToString();
             texts[2].text = member.rank.ToString();
         }
+    }
+
+    // 2. ★ [결산 확인] 버튼을 눌렀을 때 실행될 함수 추가!
+    public void OnClickConfirmBattleResult()
+    {
+        // 1. (나중에 실제 UI가 생기면) 결과창 팝업 닫기
+        // resultPopup.SetActive(false); 
+
+        // 2. 비로소 시간이 1주 흐릅니다! (정산 페이즈 종료 -> 다음 정비 페이즈 시작)
+        GameManager.Instance.PassWeek();
+
+        // 3. 깎인 월급이나 바뀐 주차를 로비 UI에 즉시 반영
+        RefreshUI();
+        
+        Debug.Log("✅ 결산 완료! 다음 주차 정비 페이즈를 시작합니다.");
     }
 }

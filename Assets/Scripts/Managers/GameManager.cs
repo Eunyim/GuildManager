@@ -63,7 +63,11 @@ public class GameManager : MonoBehaviour
     public bool hasPendingResult = false; // 보여줄 결산 창이 있는가?
     public bool lastBattleWon = false;    // 승리했는가? (도주/패배는 false)
     public Dictionary<string, int> lastEarnedLoot = new Dictionary<string, int>(); // 방금 던전에서 얻은 템들
-
+    
+    [Header("시간 및 경제 시스템")]
+    public int month = 1;       // 현재 월
+    public int week = 1;        // 현재 주차 (1~4주)
+    public int weeksPerMonth = 4; // 한 달은 4주(4턴)로 고정
 
 
 
@@ -179,6 +183,63 @@ public class GameManager : MonoBehaviour
         hasPendingResult = true; // "로비야, 결산 창 띄울 준비 해!"
         
         Debug.Log($"📦 길드 창고 저장 완료! (총 {dungeonLoot.Count}개의 전리품을 정리했습니다)");
+    }
+
+    // ★ [실행 페이즈 -> 정산 페이즈] 1주가 지나는 함수 (로비 결산창에서 확인을 누를 때 실행!)
+    public void PassWeek()
+    {
+        week++;
+        Debug.Log($"⏳ 시간이 1주 흘렀습니다. (현재 날짜: {month}월 {week}주차)");
+
+        // 4주차가 넘어가면(즉 5주차가 되면) 다음 달로 넘기고 월급 정산!
+        if (week > weeksPerMonth)
+        {
+            week = 1; 
+            month++;  
+            
+            MonthlySettlement(); // 💸 월급 정산 실행!
+        }
+        
+        // ★ [추가] 병상에 누워있는 부상자들 회복 처리!
+        foreach (Adventurer adv in adventurers)
+        {
+            if (!adv.isDead && adv.recoveryWeeks > 0)
+            {
+                adv.recoveryWeeks--; // 1주 푹 쉬었습니다!
+
+                // 남은 요양 기간이 0이 되었다면? -> 완치!
+                if (adv.recoveryWeeks <= 0)
+                {
+                    adv.currentHp = adv.hp; // HP 100% 회복
+                    adv.recoveryWeeks = 0;  // 혹시 모를 마이너스 방지
+                    Debug.Log($"💖 [회복 완료] {adv.name}님이 완치되었습니다! (다시 파견 가능)");
+                }
+            }
+        }
+    }
+
+    // ★ 월급 정산 (파산의 위험)
+    private void MonthlySettlement()
+    {
+        Debug.Log($"📅 {month}월 1주차가 되었습니다! [길드 유지비 및 월급 정산의 날]");
+        int totalSalary = 0;
+
+        foreach (Adventurer adv in adventurers)
+        {
+            // (기획에 맞춰 랭크/레벨별로 월급을 다르게 줄 수 있습니다. 일단 기본 50G + 레벨당 10G)
+            int salary = 50 + (adv.level * 10); 
+            totalSalary += salary;
+        }
+
+        gold -= totalSalary; // 길드 자금에서 뭉텅이로 차감!
+        
+        Debug.Log($"💸 모험가 {adventurers.Count}명의 월급으로 총 {totalSalary}G가 지출되었습니다. (남은 골드: {gold}G)");
+
+        if (gold < 0)
+        {
+            Debug.LogError("🚨 [파산 위기] 길드 자금이 마이너스입니다! 길드가 파산했습니다! (Game Over)");
+            // TODO: 나중에 파산 팝업 UI를 띄우고 메인 화면으로 쫓아내는 로직 연결
+        }
     }
 
 

@@ -12890,6 +12890,9 @@ MonoBehaviour:
   partyList: []
   hasPendingResult: 0
   lastBattleWon: 0
+  month: 1
+  week: 1
+  weeksPerMonth: 4
 --- !u!4 &1717635450
 Transform:
   m_ObjectHideFlags: 0

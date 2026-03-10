@@ -538,6 +538,28 @@ public class BattleManager : MonoBehaviour
             {
                 deadAdventurers.Add(member);
             }
+
+            else if (member.currentHp < member.hp)
+            {
+        // 남은 체력 퍼센트 계산
+        float hpPercent = (float)member.currentHp / member.hp;
+
+        // 1. 중상 (체력 30% 이하): 2주 휴식 필요 + (나중에 여기에 트라우마 특성 부여)
+        if (hpPercent <= 0.3f)
+        {
+            member.recoveryWeeks = 2; 
+            Debug.Log($"🚨 [중상] {member.name}님이 심각한 부상을 입었습니다! (완치까지 2주 필요)");
+        }
+        // 2. 경상 (체력 30% 초과): 1주 휴식 필요
+        else
+        {
+            member.recoveryWeeks = 1;
+            Debug.Log($"⚠️ [경상] {member.name}님이 가벼운 부상을 입었습니다. (완치까지 1주 필요)");
+        }
+        
+        // 다친 모험가는 파티에서 강제로 빼서 병상(대기 상태)으로 보냅니다!
+        member.assignedPartyIndex = -1; 
+            }
         }
         
         // ★ [핵심] 살생부에 적힌 전사자들을 길드에서 영원히 지워버립니다.
