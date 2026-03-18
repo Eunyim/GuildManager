@@ -464,24 +464,31 @@ public class LobbyManager : MonoBehaviour
     // --- 1. 슬롯 클릭 시 실행될 함수 (팝업 열기) ---
     public void OpenDetailPopup(Adventurer adventurer)
     {
-        currentTarget = adventurer; // 누구를 클릭했는지 기억
+       currentTarget = adventurer; // 누구를 클릭했는지 기억
 
-        // 텍스트 데이터 채워넣기
         detailName.text = adventurer.name;
         detailInfo.text = $"{adventurer.job} | Rank {adventurer.rank}";
         detailTrait.text = $"성격: {adventurer.GetTraitName()}";
         
-        // 소속 파티 표시 로직
-        if (adventurer.assignedPartyIndex == -1)
+        // ★ [수정] 소속 파티 표시 로직 (부상자를 최우선으로 표시)
+        if (adventurer.recoveryWeeks > 0)
+        {
+            detailParty.text = $"<color=red>🏥 요양 중 (완치까지 {adventurer.recoveryWeeks}주 남음)</color>";
+        }
+        else if (adventurer.assignedPartyIndex == -1)
+        {
             detailParty.text = "<color=green>대기 중</color>";
+        }
         else
+        {
             detailParty.text = $"<color=yellow>파티 {adventurer.assignedPartyIndex + 1} 소속</color>";
+        }
 
-        detailStats.text = $"HP: {adventurer.hp} / ATK: {adventurer.atk}";
+        // ★ [수정] 체력을 '현재 체력 / 최대 체력' 형태로 보여주기!
+        detailStats.text = $"HP: {adventurer.currentHp} / {adventurer.hp} | ATK: {adventurer.atk}";
 
         // 팝업 켜기
         detailPopup.SetActive(true);
-
         detailPopup.transform.SetAsLastSibling(); // 맨 앞으로 가져오기
     }
 
@@ -672,7 +679,16 @@ public class LobbyManager : MonoBehaviour
         TextMeshProUGUI[] texts = slot.GetComponentsInChildren<TextMeshProUGUI>();
         if (texts.Length >= 3)
         {
-            texts[0].text = member.name;
+            // ★ [추가] 부상 중이면 이름 옆에 빨간색으로 몇 주 남았는지 표시!
+            if (member.recoveryWeeks > 0)
+            {
+                texts[0].text = $"<color=red>{member.name} (부상:{member.recoveryWeeks}주)</color>";
+            }
+            else
+            {
+                texts[0].text = member.name; // 건강하면 그냥 이름만
+            }
+            
             texts[1].text = member.job.ToString();
             texts[2].text = member.rank.ToString();
         }
