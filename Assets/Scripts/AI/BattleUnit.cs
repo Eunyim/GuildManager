@@ -243,9 +243,20 @@ public class BattleUnit : MonoBehaviour
 
     protected virtual void MoveToTarget()
     {
-        transform.position = Vector3.MoveTowards(transform.position, target.transform.position, moveSpeed * Time.deltaTime);
+        Vector3 destination = target.transform.position;
 
-        if (target.transform.position.x < transform.position.x) 
+        // ★ [특성] 겁쟁이 AI: 아군의 '뒤'로 숨기
+        if (isCoward && target != this)
+        {
+            // 아군(target)의 뒤쪽 좌표 계산 (적의 반대 방향으로 1.5만큼 더 뒤)
+            // 보통 적은 오른쪽에 있으므로 왼쪽(-1)으로 숨으려 함
+            destination = target.transform.position + new Vector3(-1.5f, 0, 0);
+        }
+
+        transform.position = Vector3.MoveTowards(transform.position, destination, moveSpeed * Time.deltaTime);
+
+        // 방향 전환 (이동 방향에 따라 스케일 조정)
+        if (destination.x < transform.position.x) 
             transform.localScale = new Vector3(-1, 1, 1); 
         else 
             transform.localScale = new Vector3(1, 1, 1);  

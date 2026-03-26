@@ -29,7 +29,15 @@ public class LobbyManager : MonoBehaviour
 
     [Header("팝업창")]
     public GameObject recruitPopup;
-     public SummonResultPopup summonResultPopup; //결과창 스크립트로 연결
+    public GameObject resultPopup; // ★ 추가: 전투 결과 팝업
+    public SummonResultPopup summonResultPopup; //결과창 스크립트로 연결
+
+    [Header("전투 결과 팝업 UI 요소")]
+    public TextMeshProUGUI resultTitleText;
+    public TextMeshProUGUI resultGoldText;
+    public TextMeshProUGUI resultReputationText;
+    public Transform resultItemContent;
+    public GameObject resultItemSlotPrefab;
 
     [Header("모집 설정")]
     public int recruitCost = 100; // 모집 비용 (100골드)
@@ -111,6 +119,47 @@ public class LobbyManager : MonoBehaviour
         
         // ★ [수정] Month와 Week를 보여주게 변경! (dayText 변수를 그대로 쓰셔도 됩니다)
         if (dayText != null) dayText.text = $"{GameManager.Instance.month}월 {GameManager.Instance.week}주차";
+
+        // ★ [추가] 전투 결과가 있다면 결과 팝업 띄우기
+        if (GameManager.Instance.hasPendingResult)
+        {
+            if (resultPopup != null) 
+            {
+                resultPopup.SetActive(true);
+
+                // 1. 승리/패배 메시지 표시
+                if (resultTitleText != null)
+                {
+                    resultTitleText.text = GameManager.Instance.lastBattleWon ? 
+                                          "🎉 던전 클리어! 🎉" : 
+                                          "💀 전투 실패... 💀";
+                    resultTitleText.color = GameManager.Instance.lastBattleWon ? Color.green : Color.red;
+                }
+
+                // 2. 획득 골드 및 명성 표시 (GameManager.AddQuestRewards에서 이미 처리됨)
+                // 여기서는 현재 GameManager의 골드/명성을 보여주기보다, 이번 전투에서 얻은/잃은 양을 보여주는 게 좋습니다.
+                // GameManager에 이번 전투에서 얻은 골드/명성을 저장하는 임시 변수가 필요합니다. (지금은 총합만 있음)
+                // 일단은 그냥 로그로 대체하거나, GameManager에서 별도 변수를 추가해야 합니다.
+                if (resultGoldText != null) resultGoldText.text = $"골드: {GameManager.Instance.gold:N0} G"; // 현재 총 골드
+                if (resultReputationText != null) resultReputationText.text = $"명성: {GameManager.Instance.reputation} 점"; // 현재 총 명성
+
+                // 3. 획득 아이템 목록 표시
+                if (resultItemContent != null && resultItemSlotPrefab != null)
+                {
+                    // 기존 아이템 슬롯 제거
+                    foreach (Transform child in resultItemContent) Destroy(child.gameObject);
+
+                    foreach (var itemPair in GameManager.Instance.lastEarnedLoot)
+                    {
+                        GameObject itemSlot = Instantiate(resultItemSlotPrefab, resultItemContent);
+                        TextMeshProUGUI itemText = itemSlot.GetComponentInChildren<TextMeshProUGUI>();
+                        if (itemText != null) itemText.text = $"{itemPair.Key} x {itemPair.Value}";
+                    }
+                }
+            }
+            GameManager.Instance.hasPendingResult = false; // 플래그 초기화 (한 번만 띄우기 위함)
+            RefreshMemberList(); // 멤버 목록 갱신 (부상자/사망자 반영)
+        }
     }
 
     // --- 버튼 연결용 함수들 (나중에 내용 채움) ---

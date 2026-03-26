@@ -185,6 +185,16 @@ public class GameManager : MonoBehaviour
         Debug.Log($"📦 길드 창고 저장 완료! (총 {dungeonLoot.Count}개의 전리품을 정리했습니다)");
     }
 
+    public void AddQuestRewards(int earnedGold, int earnedRep, bool won)
+    {
+        gold += earnedGold;
+        reputation += earnedRep;
+        lastBattleWon = won;
+        hasPendingResult = true; // 로비에서 결과창을 띄우도록 예약
+        
+        Debug.Log($"💰 [보상 정산] 골드: +{earnedGold}, 명성: +{earnedRep} (현재 골드: {gold})");
+    }
+
     // ★ [실행 페이즈 -> 정산 페이즈] 1주가 지나는 함수 (로비 결산창에서 확인을 누를 때 실행!)
     public void PassWeek()
     {
