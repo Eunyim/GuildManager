@@ -59,6 +59,16 @@ public class GameManager : MonoBehaviour
     [Header("길드 인벤토리")]
     public Dictionary<string, int> guildInventory = new Dictionary<string, int>();
 
+    [Header("트라우마 데이터")]
+    public List<TraitData> traumaPool = new List<TraitData>();
+    public int traumaChancePercentage = 50; // 트라우마 발생 확률 (0-100%)
+
+    public TraitData GetRandomTrauma()
+    {
+        if (traumaPool == null || traumaPool.Count == 0) return null;
+        return traumaPool[Random.Range(0, traumaPool.Count)];
+    }
+
     [Header("결산 데이터 (로비 전달용)")]
     public bool hasPendingResult = false; // 보여줄 결산 창이 있는가?
     public bool lastBattleWon = false;    // 승리했는가? (도주/패배는 false)

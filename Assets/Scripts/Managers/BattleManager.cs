@@ -369,7 +369,32 @@ public class BattleManager : MonoBehaviour
             else if (member.currentHp < member.hp)
             {
                 float hpPercent = (float)member.currentHp / member.hp;
-                member.recoveryWeeks = (hpPercent <= 0.3f) ? 2 : 1;
+                
+                // [중상 처리: 체력 30% 이하]
+                if (hpPercent <= 0.3f)
+                {
+                    member.recoveryWeeks = 2;
+                    
+                    // ★ 트라우마(부정적 특성) 부여 확률 체크
+                    if (Random.Range(0, 100) < GameManager.Instance.traumaChancePercentage)
+                    {
+                        TraitData trauma = GameManager.Instance.GetRandomTrauma();
+                        if (trauma != null && !member.traits.Contains(trauma))
+                        {
+                            member.traits.Add(trauma);
+                            Debug.Log($"😱 [트라우마 발생] {member.name}님이 '{trauma.traitName}' 특성을 얻었습니다.");
+                        }
+                    }
+                    else
+                    {
+                        Debug.Log($"😌 [중상] {member.name}님이 중상을 입었지만 트라우마는 발생하지 않았습니다.");
+                    }
+                }
+                else
+                {
+                    member.recoveryWeeks = 1;
+                }
+                
                 member.assignedPartyIndex = -1; 
             }
         }
