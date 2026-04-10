@@ -58,7 +58,16 @@ public class BattleManager : MonoBehaviour
         // 1. 아군 소환 (직업별 프리팹 사용)
         SetupAllyParty();
 
-        // 2. 던전 스테이지 시작 (0번부터)
+        // 2. 퀘스트에 스테이지가 있으면 인스펙터 값보다 우선 사용
+        if (GameManager.Instance != null &&
+            GameManager.Instance.currentQuest != null &&
+            GameManager.Instance.currentQuest.stages != null &&
+            GameManager.Instance.currentQuest.stages.Count > 0)
+        {
+            dungeonStages = GameManager.Instance.currentQuest.stages;
+        }
+
+        // 3. 던전 스테이지 시작 (0번부터)
         if (dungeonStages != null && dungeonStages.Count > 0)
         {
             StartCoroutine(StartStageCoroutine(0));
@@ -251,13 +260,16 @@ public class BattleManager : MonoBehaviour
             if (GameManager.Instance.currentDispatchParty != null)
             {
                 GameManager.Instance.currentDispatchParty.state = PartyState.Idle;
-                
+
                 int reward = (GameManager.Instance.currentQuest != null) ? GameManager.Instance.currentQuest.rewardGold : 0;
-                // 승리 여부에 따라 명성치 조절 (여기서는 기본 승리로 가정하거나 별도 플래그 사용 가능)
                 GameManager.Instance.AddQuestRewards(reward, reward / 10, true);
-                
+
+                // 구출 퀘스트 승리 시 → 낙오 모험가 구출 처리
+                if (GameManager.Instance.currentQuest != null && GameManager.Instance.currentQuest.isRescueQuest)
+                    GameManager.Instance.CompleteRescueQuest(GameManager.Instance.currentQuest);
+
                 GameManager.Instance.currentDispatchParty = null;
-                GameManager.Instance.currentQuest = null;
+                GameManager.Instance.CleanupCurrentQuest();
             }
         }
         SceneManager.LoadScene("LobbyScene");
@@ -289,23 +301,109 @@ public class BattleManager : MonoBehaviour
 
     public void OnClickFleeButton()
     {
+        if (!isBattleActive) return;
+
         isBattleActive = false;
+
         GameObject[] allies = GameObject.FindGameObjectsWithTag("Player");
-        foreach (GameObject obj in allies) { BattleUnit u = obj.GetComponent<BattleUnit>(); if(u) u.enabled = false; }
+        foreach (GameObject obj in allies)
+        {
+            BattleUnit u = obj.GetComponent<BattleUnit>();
+            if (u != null) u.enabled = false;
+        }
+
         StartCoroutine(EscapeToLobby());
     }
 
     private IEnumerator EscapeToLobby()
     {
-        yield return new WaitForSeconds(1.0f); 
+        yield return new WaitForSeconds(1.0f);
+
         if (GameManager.Instance != null && GameManager.Instance.currentDispatchParty != null)
         {
-            GameManager.Instance.currentDispatchParty.state = PartyState.Idle; 
-            SyncAdventurerStatus();
-            GameManager.Instance.AddLootToGuild(earnedItems, false); 
-            GameManager.Instance.currentDispatchParty = null;
+            ApplyFleeConsequences();
+            GameManager.Instance.AddLootToGuild(earnedItems, false);
         }
+
         SceneManager.LoadScene("LobbyScene");
+    }
+
+    // 도주 시 낙오 + 사기 하락 처리
+    private void ApplyFleeConsequences()
+    {
+        if (GameManager.Instance == null || GameManager.Instance.currentDispatchParty == null) return;
+
+        GameObject[] allyObjects = GameObject.FindGameObjectsWithTag("Player");
+        List<Adventurer> strandedList  = new List<Adventurer>();
+        List<Adventurer> returnedList  = new List<Adventurer>();
+        List<Adventurer> deadList      = new List<Adventurer>();
+
+        foreach (Adventurer member in GameManager.Instance.currentDispatchParty.members)
+        {
+            string unitName = $"Unit_{member.name}";
+            BattleUnit unitScript = null;
+            foreach (GameObject obj in allyObjects)
+            {
+                if (obj.name == unitName) { unitScript = obj.GetComponent<BattleUnit>(); break; }
+            }
+
+            // 전사 판정
+            bool isDead    = (unitScript == null || unitScript.isDead);
+            // 부상 판정: 살아있지만 HP가 최대 미만
+            bool isInjured = !isDead && (unitScript.currentHp < unitScript.maxHp);
+
+            if (isDead)
+            {
+                member.isDead     = true;
+                member.currentHp  = 0;
+                deadList.Add(member);
+            }
+            else if (isInjured)
+            {
+                // 부상자 → 낙오
+                member.currentHp              = (int)unitScript.currentHp;
+                member.isStranded             = true;
+                member.strandedWeeksRemaining = 4; // 4주 안에 구출하지 못하면 사망
+                member.assignedPartyIndex     = -1;
+                strandedList.Add(member);
+                Debug.Log($"😨 [낙오] {member.name}이(가) 부상 상태로 던전에 남겨졌습니다. (구출 기한: 4주)");
+            }
+            else
+            {
+                // 건강하게 복귀
+                member.currentHp = (int)unitScript.currentHp;
+                returnedList.Add(member);
+            }
+        }
+
+        // 사기 하락: 복귀 파티원 전체 능력치 10~20% 랜덤 하락
+        if (returnedList.Count > 0)
+        {
+            float penalty = Random.Range(0.10f, 0.20f);
+            foreach (Adventurer adv in returnedList)
+            {
+                adv.moralePenalty = penalty;
+                Debug.Log($"😞 [사기 하락] {adv.name} - 능력치 {penalty * 100f:F0}% 감소 (다음 파견 적용)");
+            }
+        }
+
+        // 전사자: 파티 & 모험가 명단에서 제거
+        foreach (Adventurer dead in deadList)
+        {
+            GameManager.Instance.currentDispatchParty.members.Remove(dead);
+            GameManager.Instance.adventurers.Remove(dead);
+            Debug.Log($"💀 [전사] {dead.name}이(가) 사망했습니다.");
+        }
+
+        // 낙오자: 파티에서만 제거 (adventurers 명단은 유지 → 나중에 구출 가능)
+        foreach (Adventurer stranded in strandedList)
+        {
+            GameManager.Instance.currentDispatchParty.members.Remove(stranded);
+        }
+
+        GameManager.Instance.currentDispatchParty.state = PartyState.Idle;
+        GameManager.Instance.currentDispatchParty = null;
+        GameManager.Instance.CleanupCurrentQuest();
     }
 
     public void OnChestOpened()

@@ -1,13 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-[System.Serializable] // 인스펙터에 보이게 하는 마법의 단어
-public struct DropItem
-{
-    public MonsterDropData item;      // 떨굴 아이템
-    [Range(0, 100)] 
-    public float dropRate;     // 확률 (0~100%)
-}
 public class EnemySlime : BattleUnit
 {
     [Header("드랍 아이템 설정")]

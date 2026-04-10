@@ -38,10 +38,11 @@ public class BattleUnit : MonoBehaviour
 
     public void Initialize(Adventurer data)
     {
-        maxHp = data.hp;
+        float multiplier = 1f - Mathf.Clamp(data.moralePenalty, 0f, 0.5f);
+        maxHp = data.hp * multiplier;
         currentHp = maxHp;
-        attackPower = data.atk;
-        currentMp = 0; 
+        attackPower = data.atk * multiplier;
+        currentMp = 0;
         name = $"Unit_{data.name}";
 
         if (data.traits != null)
@@ -49,6 +50,9 @@ public class BattleUnit : MonoBehaviour
             activeTraits = data.traits;
         }
         baseAttackPower = attackPower;
+
+        if (data.moralePenalty > 0f)
+            Debug.Log($"😞 [{data.name}] 사기 하락 중 (능력치 {data.moralePenalty * 100f:F0}% 감소)");
     }
 
     protected virtual void Start()

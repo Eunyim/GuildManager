@@ -69,6 +69,9 @@ public class GameManager : MonoBehaviour
         return traumaPool[Random.Range(0, traumaPool.Count)];
     }
 
+    [Header("구출 퀘스트 목록")]
+    public List<QuestData> rescueQuests = new List<QuestData>(); // 현재 활성 구출 퀘스트
+
     [Header("결산 데이터 (로비 전달용)")]
     public bool hasPendingResult = false; // 보여줄 결산 창이 있는가?
     public bool lastBattleWon = false;    // 승리했는가? (도주/패배는 false)
@@ -195,6 +198,52 @@ public class GameManager : MonoBehaviour
         Debug.Log($"📦 길드 창고 저장 완료! (총 {dungeonLoot.Count}개의 전리품을 정리했습니다)");
     }
 
+    // 구출 퀘스트 완료: 낙오 모험가를 구출하고 퀘스트를 목록에서 제거합니다.
+    // BattleManager에서 승리 직후, CleanupCurrentQuest 전에 호출합니다.
+    public void CompleteRescueQuest(QuestData quest)
+    {
+        if (quest == null || !quest.isRescueQuest) return;
+
+        Adventurer rescued = adventurers.Find(a => a.name == quest.rescueTargetName && a.isStranded);
+        if (rescued != null)
+        {
+            rescued.isStranded             = false;
+            rescued.strandedWeeksRemaining = 0;
+            rescued.currentHp              = Mathf.Max(1, rescued.hp / 2); // 생환, 절반 체력
+            rescued.recoveryWeeks          = 1;                             // 1주 요양 필요
+            rescued.assignedPartyIndex     = -1;
+            Debug.Log($"🎉 [구출 완료] {rescued.name}이(가) 무사히 귀환했습니다! (1주 요양 후 파견 가능)");
+        }
+
+        rescueQuests.Remove(quest);
+        // 인스턴스 파괴는 CleanupCurrentQuest에서 처리
+    }
+
+    // 구출 퀘스트를 목록에서 제거하고 ScriptableObject 인스턴스를 파괴합니다.
+    private void DestroyRescueQuest(QuestData quest)
+    {
+        if (quest == null) return;
+        rescueQuests.Remove(quest);
+        if (quest.stages != null)
+            foreach (StageData s in quest.stages)
+                if (s != null) Destroy(s);
+        Destroy(quest);
+    }
+
+    // QuestGenerator로 생성된 런타임 ScriptableObject 인스턴스를 정리합니다.
+    // BattleManager에서 퀘스트가 끝날 때 호출하세요.
+    public void CleanupCurrentQuest()
+    {
+        if (currentQuest == null) return;
+
+        if (currentQuest.stages != null)
+            foreach (StageData s in currentQuest.stages)
+                if (s != null) Destroy(s);
+
+        Destroy(currentQuest);
+        currentQuest = null;
+    }
+
     public void AddQuestRewards(int earnedGold, int earnedRep, bool won)
     {
         gold += earnedGold;
@@ -220,22 +269,42 @@ public class GameManager : MonoBehaviour
             MonthlySettlement(); // 💸 월급 정산 실행!
         }
         
-        // ★ [추가] 병상에 누워있는 부상자들 회복 처리!
+        // 부상자 회복 처리
         foreach (Adventurer adv in adventurers)
         {
             if (!adv.isDead && adv.recoveryWeeks > 0)
             {
-                adv.recoveryWeeks--; // 1주 푹 쉬었습니다!
-
-                // 남은 요양 기간이 0이 되었다면? -> 완치!
+                adv.recoveryWeeks--;
                 if (adv.recoveryWeeks <= 0)
                 {
-                    adv.currentHp = adv.hp; // HP 100% 회복
-                    adv.recoveryWeeks = 0;  // 혹시 모를 마이너스 방지
+                    adv.currentHp     = adv.hp;
+                    adv.recoveryWeeks = 0;
+                    adv.moralePenalty = 0f;
                     Debug.Log($"💖 [회복 완료] {adv.name}님이 완치되었습니다! (다시 파견 가능)");
                 }
             }
         }
+
+        // 낙오 모험가 구출 기한 타이머 처리
+        List<Adventurer> expiredList = new List<Adventurer>();
+        foreach (Adventurer adv in adventurers)
+        {
+            if (!adv.isStranded) continue;
+
+            adv.strandedWeeksRemaining--;
+            Debug.Log($"⏳ [낙오] {adv.name} - 구출 기한 {adv.strandedWeeksRemaining}주 남음");
+
+            if (adv.strandedWeeksRemaining <= 0)
+            {
+                Debug.Log($"💀 [사망] {adv.name}이(가) 구출되지 못하고 던전에서 사망했습니다...");
+                expiredList.Add(adv);
+
+                // 해당 구출 퀘스트도 제거
+                QuestData rq = rescueQuests.Find(q => q.rescueTargetName == adv.name);
+                if (rq != null) DestroyRescueQuest(rq);
+            }
+        }
+        foreach (Adventurer dead in expiredList) adventurers.Remove(dead);
     }
 
     // ★ 월급 정산 (파산의 위험)

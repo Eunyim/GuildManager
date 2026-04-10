@@ -59,6 +59,15 @@ public class Adventurer
 
     public int recoveryWeeks = 0;
 
+    // 도주 시 던전에 남겨진 상태 (낙오)
+    public bool isStranded = false;
+
+    // 낙오 후 구출 가능 남은 주 수 (0이 되면 사망)
+    public int strandedWeeksRemaining = 0;
+
+    // 도주 후 사기 하락 패널티 (0.0 ~ 0.2, 능력치에 곱연산으로 감소)
+    public float moralePenalty = 0f;
+
     // -1이면 "대기 중(무소속)", 0, 1, 2...이면 해당 파티 소속
     public int assignedPartyIndex = -1;
     

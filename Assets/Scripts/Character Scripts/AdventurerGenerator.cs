@@ -7,22 +7,58 @@ public static class AdventurerGenerator
     private static float[] probNormal  = { 30f, 40f, 20f, 9f,  1f }; 
     private static float[] probPremium = { 10f, 20f, 40f, 25f, 5f }; 
 
-      private static string[] names = { 
-
-        "아서", "란슬롯", "가웨인", "멀린", "헤라클레스", 
-
-        "지크", "잔느", "쿠훌린", "길가메쉬", "이스칸달",
-
-        "토르", "로키", "오딘", "프레이야", "펜릴"
-
+    // 음절 조합 이름 생성 (앞 × 뒤 = 180가지, 3음절 포함 시 1440가지+)
+    private static readonly string[] NameFront = {
+        "아", "카", "레", "미", "세", "리", "나", "에", "소", "타",
+        "가", "로", "엘", "투", "라", "케", "발", "시", "오", "드"
     };
+    private static readonly string[] NameMid = {
+        "르", "미", "나", "레", "아", "에", "리", "드", "로", "스"
+    };
+    private static readonly string[] NameBack = {
+        "린", "론", "셀", "엔", "드", "나", "온", "딘", "크", "벨",
+        "인", "안", "스", "르", "브"
+    };
+
+    // 기존 모험가와 겹치지 않는 이름 생성 (최대 10회 재시도)
+    private static string GenerateUniqueName()
+    {
+        for (int i = 0; i < 10; i++)
+        {
+            string candidate = GenerateName();
+            bool duplicate = false;
+
+            if (GameManager.Instance != null)
+                foreach (Adventurer adv in GameManager.Instance.adventurers)
+                    if (adv.name == candidate) { duplicate = true; break; }
+
+            if (!duplicate) return candidate;
+        }
+        // 10회 시도 후에도 겹치면 그냥 반환 (사실상 발생 불가)
+        return GenerateName();
+    }
+
+    private static string GenerateName()
+    {
+        string front = NameFront[Random.Range(0, NameFront.Length)];
+        string back  = NameBack[Random.Range(0, NameBack.Length)];
+
+        // 30% 확률로 중간 음절 추가 (3음절 이름)
+        if (Random.value < 0.3f)
+        {
+            string mid = NameMid[Random.Range(0, NameMid.Length)];
+            return front + mid + back;
+        }
+
+        return front + back;
+    }
 
     // ★ 여기에 tier 매개변수가 확실히 있어야 함!
     public static Adventurer Generate(SummonTier tier)
     {
         Adventurer newAdv = new Adventurer();
 
-        newAdv.name = names[Random.Range(0, names.Length)];
+        newAdv.name = GenerateUniqueName();
         newAdv.job = (JobType)Random.Range(0, System.Enum.GetValues(typeof(JobType)).Length);
         newAdv.trait = (TraitType)Random.Range(0, System.Enum.GetValues(typeof(TraitType)).Length);
 

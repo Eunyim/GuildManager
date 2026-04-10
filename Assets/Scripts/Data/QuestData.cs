@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 [CreateAssetMenu(fileName = "New Quest", menuName = "Guild/Quest Data")]
 public class QuestData : ScriptableObject
@@ -17,4 +18,11 @@ public class QuestData : ScriptableObject
     public int recommendedLevel;    
 
     public GameObject enemyPrefab;
+
+    [Header("던전 스테이지 구성 (랜덤 생성 시 자동 설정)")]
+    public List<StageData> stages = new List<StageData>();
+
+    [Header("구출 퀘스트 전용")]
+    public bool isRescueQuest = false;
+    public string rescueTargetName = ""; // 구출 대상 모험가 이름
 }
