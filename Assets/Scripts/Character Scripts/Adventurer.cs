@@ -49,7 +49,9 @@ public class Adventurer
     // 능력치
 
     public int level = 1;
-    
+    public int exp = 0;
+    public int expToNextLevel = 100; // 레벨 N → N+1 필요 경험치 = N * 100
+
     public int hp;
     public int atk;
     public float speed;
@@ -58,6 +60,9 @@ public class Adventurer
     public bool isDead = false;
 
     public int recoveryWeeks = 0;
+
+    // 전사 정보 (유해 수습 의뢰 생성에 사용)
+    public string diedAtQuestName = ""; // 전사한 의뢰 이름
 
     // 도주 시 던전에 남겨진 상태 (낙오)
     public bool isStranded = false;

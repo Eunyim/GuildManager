@@ -26,11 +26,13 @@ public class LobbyManager : MonoBehaviour
     public TextMeshProUGUI guildNameText;
     public TextMeshProUGUI goldText;
     public TextMeshProUGUI dayText;
+    public TextMeshProUGUI spiritStoneText; // 영혼석 보유 수 표시 (없으면 null 무시)
 
     [Header("팝업창")]
     public GameObject recruitPopup;
     public GameObject resultPopup; // ★ 추가: 전투 결과 팝업
     public SummonResultPopup summonResultPopup; //결과창 스크립트로 연결
+    public SpiritStonePopup spiritStonePopup; // 신전(영혼석) 팝업
 
     [Header("전투 결과 팝업 UI 요소")]
     public TextMeshProUGUI resultTitleText;
@@ -38,6 +40,7 @@ public class LobbyManager : MonoBehaviour
     public TextMeshProUGUI resultReputationText;
     public Transform resultItemContent;
     public GameObject resultItemSlotPrefab;
+    public TextMeshProUGUI resultLevelUpText; // 레벨업 내역 (없으면 null 무시)
 
     [Header("모집 설정")]
     public int recruitCost = 100; // 모집 비용 (100골드)
@@ -119,6 +122,7 @@ public class LobbyManager : MonoBehaviour
         
         // ★ [수정] Month와 Week를 보여주게 변경! (dayText 변수를 그대로 쓰셔도 됩니다)
         if (dayText != null) dayText.text = $"{GameManager.Instance.month}월 {GameManager.Instance.week}주차";
+        if (spiritStoneText != null) spiritStoneText.text = $"영혼석 x{GameManager.Instance.GetSpiritStoneCount()}";
 
         // ★ [추가] 전투 결과가 있다면 결과 팝업 띄우기
         if (GameManager.Instance.hasPendingResult)
@@ -154,6 +158,20 @@ public class LobbyManager : MonoBehaviour
                         GameObject itemSlot = Instantiate(resultItemSlotPrefab, resultItemContent);
                         TextMeshProUGUI itemText = itemSlot.GetComponentInChildren<TextMeshProUGUI>();
                         if (itemText != null) itemText.text = $"{itemPair.Key} x {itemPair.Value}";
+                    }
+                }
+
+                // 레벨업 내역 표시
+                if (resultLevelUpText != null)
+                {
+                    if (GameManager.Instance.levelUpLog.Count > 0)
+                    {
+                        resultLevelUpText.gameObject.SetActive(true);
+                        resultLevelUpText.text = string.Join("\n", GameManager.Instance.levelUpLog);
+                    }
+                    else
+                    {
+                        resultLevelUpText.gameObject.SetActive(false);
                     }
                 }
             }
@@ -582,6 +600,14 @@ public class LobbyManager : MonoBehaviour
     {
         Debug.Log("탐험 버튼 클릭");
         // 나중에 던전 씬 로드
+    }
+
+    public void OnClickOpenSpiritStonePopup()
+    {
+        if (spiritStonePopup == null) return;
+        spiritStonePopup.gameObject.SetActive(true);
+        spiritStonePopup.gameObject.transform.SetAsLastSibling();
+        spiritStonePopup.Refresh();
     }
 
     /*public void OnClickCard()

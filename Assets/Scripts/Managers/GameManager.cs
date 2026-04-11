@@ -63,6 +63,12 @@ public class GameManager : MonoBehaviour
     public List<TraitData> traumaPool = new List<TraitData>();
     public int traumaChancePercentage = 50; // 트라우마 발생 확률 (0-100%)
 
+    [Header("긍정 특성 풀 (레벨업 보상)")]
+    public List<TraitData> positiveTraitPool = new List<TraitData>();
+
+    [Header("레벨업 로그 (결과창 전달용)")]
+    public List<string> levelUpLog = new List<string>();
+
     public TraitData GetRandomTrauma()
     {
         if (traumaPool == null || traumaPool.Count == 0) return null;
@@ -71,6 +77,10 @@ public class GameManager : MonoBehaviour
 
     [Header("구출 퀘스트 목록")]
     public List<QuestData> rescueQuests = new List<QuestData>(); // 현재 활성 구출 퀘스트
+
+    [Header("전사자 목록 (유해 수습 대상)")]
+    public List<Adventurer> deadAdventurers = new List<Adventurer>(); // 유해가 남아있는 전사자
+    public List<QuestData> corpseQuests = new List<QuestData>();     // 현재 활성 유해 수습 퀘스트
 
     [Header("결산 데이터 (로비 전달용)")]
     public bool hasPendingResult = false; // 보여줄 결산 창이 있는가?
@@ -196,6 +206,236 @@ public class GameManager : MonoBehaviour
         hasPendingResult = true; // "로비야, 결산 창 띄울 준비 해!"
         
         Debug.Log($"📦 길드 창고 저장 완료! (총 {dungeonLoot.Count}개의 전리품을 정리했습니다)");
+    }
+
+    // ★ 전투 후 생환 파티원에게 경험치를 지급하고 레벨업을 처리합니다.
+    // BattleManager.OnClick_ReturnToLobby에서 승리 시 호출합니다.
+    public void GainExpAfterBattle(List<Adventurer> survivors, string questRank)
+    {
+        if (survivors == null || survivors.Count == 0) return;
+
+        levelUpLog.Clear();
+        int expGain = GetExpByRank(questRank);
+
+        foreach (Adventurer adv in survivors)
+        {
+            if (adv.isDead || adv.isStranded) continue;
+
+            adv.exp += expGain;
+            Debug.Log($"⭐ [{adv.name}] 경험치 +{expGain} (현재: {adv.exp}/{adv.expToNextLevel})");
+
+            // 연속 레벨업 처리 (한 번 전투로 여러 레벨 오를 수 있음)
+            while (adv.exp >= adv.expToNextLevel)
+            {
+                adv.exp -= adv.expToNextLevel;
+                LevelUp(adv);
+            }
+        }
+    }
+
+    private void LevelUp(Adventurer adv)
+    {
+        adv.level++;
+        adv.expToNextLevel = adv.level * 100;
+
+        int hpGain  = GetHpGainPerLevel(adv.job, adv.rank);
+        int atkGain = GetAtkGainPerLevel(adv.job, adv.rank);
+        adv.hp      += hpGain;
+        adv.atk     += atkGain;
+        adv.currentHp = adv.hp; // 레벨업 시 체력 완전 회복
+
+        string msg = $"{adv.name} Lv.{adv.level - 1} → Lv.{adv.level}! (HP+{hpGain} ATK+{atkGain})";
+        levelUpLog.Add(msg);
+        Debug.Log($"🎉 [레벨업] {msg}");
+
+        // 3레벨마다 50% 확률로 긍정 특성 획득
+        if (adv.level % 3 == 0 && positiveTraitPool.Count > 0)
+        {
+            if (Random.Range(0, 100) < 50)
+            {
+                TraitData newTrait = positiveTraitPool[Random.Range(0, positiveTraitPool.Count)];
+                if (!adv.traits.Contains(newTrait))
+                {
+                    adv.traits.Add(newTrait);
+                    string traitMsg = $"{adv.name}이(가) 특성 '{newTrait.traitName}' 획득!";
+                    levelUpLog.Add(traitMsg);
+                    Debug.Log($"✨ [특성 획득] {traitMsg}");
+                }
+            }
+        }
+    }
+
+    private int GetExpByRank(string rank)
+    {
+        switch (rank)
+        {
+            case "D": return 30;
+            case "C": return 60;
+            case "B": return 100;
+            case "A": return 150;
+            case "S": return 200;
+            default:  return 30;
+        }
+    }
+
+    private int GetHpGainPerLevel(JobType job, RankType rank)
+    {
+        float baseGain;
+        switch (job)
+        {
+            case JobType.Warrior: baseGain = 15f; break;
+            case JobType.Healer:  baseGain = 9f;  break;
+            case JobType.Archer:  baseGain = 8f;  break;
+            case JobType.Mage:    baseGain = 7f;  break;
+            case JobType.Rogue:   baseGain = 6f;  break;
+            default:              baseGain = 10f; break;
+        }
+        return Mathf.RoundToInt(baseGain * (1f + (int)rank * 0.2f));
+    }
+
+    private int GetAtkGainPerLevel(JobType job, RankType rank)
+    {
+        float baseGain;
+        switch (job)
+        {
+            case JobType.Mage:    baseGain = 5f; break;
+            case JobType.Archer:  baseGain = 4f; break;
+            case JobType.Rogue:   baseGain = 4f; break;
+            case JobType.Warrior: baseGain = 3f; break;
+            case JobType.Healer:  baseGain = 2f; break;
+            default:              baseGain = 3f; break;
+        }
+        return Mathf.RoundToInt(baseGain * (1f + (int)rank * 0.2f));
+    }
+
+    // 영혼석으로 전사자를 레벨 1로 부활시킵니다.
+    // SpiritStonePopup에서 호출합니다.
+    public bool ReviveWithSpiritStone(Adventurer deceased)
+    {
+        string stoneKey = $"{deceased.name}의 영혼석";
+        int goldCost    = GetReviveCost(deceased.rank);
+
+        if (!guildInventory.ContainsKey(stoneKey) || guildInventory[stoneKey] <= 0)
+        {
+            Debug.LogWarning($"❌ [부활 실패] '{stoneKey}'이(가) 없습니다.");
+            return false;
+        }
+        if (gold < goldCost)
+        {
+            Debug.LogWarning($"❌ [부활 실패] 골드가 부족합니다. (필요: {goldCost}G, 보유: {gold}G)");
+            return false;
+        }
+
+        // 자원 소모
+        guildInventory[stoneKey]--;
+        if (guildInventory[stoneKey] <= 0) guildInventory.Remove(stoneKey);
+        gold -= goldCost;
+
+        // 레벨 1로 초기화 후 현역 복귀
+        deceased.level            = 1;
+        deceased.isDead           = false;
+        deceased.isStranded       = false;
+        deceased.strandedWeeksRemaining = 0;
+        deceased.recoveryWeeks    = 2; // 부활 후 2주 요양
+        deceased.moralePenalty    = 0f;
+        deceased.assignedPartyIndex = -1;
+        deceased.currentHp        = deceased.hp;
+        deceased.traits.Clear();   // 트라우마도 초기화
+
+        deadAdventurers.Remove(deceased);
+        adventurers.Add(deceased);
+
+        // 해당 유해 수습 퀘스트 제거
+        QuestData cq = corpseQuests.Find(q => q.corpseTargetName == deceased.name);
+        if (cq != null) DestroyCorpseQuest(cq);
+
+        Debug.Log($"✨ [부활] {deceased.name}이(가) 영혼석의 힘으로 레벨 1로 되살아났습니다! (2주 요양 필요)");
+        return true;
+    }
+
+    public int GetReviveCost(RankType rank)
+    {
+        switch (rank)
+        {
+            case RankType.D: return 200;
+            case RankType.C: return 300;
+            case RankType.B: return 500;
+            case RankType.A: return 800;
+            case RankType.S: return 1200;
+            default:         return 200;
+        }
+    }
+
+    // 보유한 모든 영혼석 총 개수 (로비 상단 표시용)
+    public int GetSpiritStoneCount()
+    {
+        int total = 0;
+        foreach (var pair in guildInventory)
+            if (pair.Key.EndsWith("의 영혼석")) total += pair.Value;
+        return total;
+    }
+
+    // 특정 모험가의 영혼석 보유 여부
+    public bool HasSpiritStone(Adventurer deceased)
+    {
+        string key = $"{deceased.name}의 영혼석";
+        return guildInventory.ContainsKey(key) && guildInventory[key] > 0;
+    }
+
+    // 유해 수습 완료: 전사자 유해를 수습하고 장비 or 영혼석을 보상으로 지급합니다.
+    // BattleManager에서 승리 직후, CleanupCurrentQuest 전에 호출합니다.
+    public void CompleteCorpseQuest(QuestData quest)
+    {
+        if (quest == null || !quest.isCorpseQuest) return;
+
+        Adventurer deceased = deadAdventurers.Find(a => a.name == quest.corpseTargetName);
+        if (deceased != null)
+        {
+            float roll = Random.value;
+            if (roll < 0.2f) // 20% 확률로 해당 모험가의 영혼석 획득
+            {
+                string stoneKey = $"{deceased.name}의 영혼석";
+                if (guildInventory.ContainsKey(stoneKey))
+                    guildInventory[stoneKey]++;
+                else
+                    guildInventory.Add(stoneKey, 1);
+
+                if (lastEarnedLoot.ContainsKey(stoneKey))
+                    lastEarnedLoot[stoneKey]++;
+                else
+                    lastEarnedLoot.Add(stoneKey, 1);
+
+                Debug.Log($"💎 [유해 수습 완료] {deceased.name}의 유해를 수습했습니다. '{stoneKey}' 획득!");
+            }
+            else // 80% 확률로 유품 (골드 환산)
+            {
+                int equipGold = 50 + (deceased.level * 20);
+                gold += equipGold;
+
+                string equipName = $"{deceased.name}의 유품";
+                if (lastEarnedLoot.ContainsKey(equipName))
+                    lastEarnedLoot[equipName]++;
+                else
+                    lastEarnedLoot.Add(equipName, 1);
+
+                Debug.Log($"⚔️ [유해 수습 완료] {deceased.name}의 유해를 수습했습니다. 유품 획득! ({equipGold}G)");
+            }
+
+            deadAdventurers.Remove(deceased);
+        }
+
+        corpseQuests.Remove(quest);
+    }
+
+    // 유해 수습 퀘스트를 목록에서 제거하고 ScriptableObject 인스턴스를 파괴합니다.
+    public void DestroyCorpseQuest(QuestData quest)
+    {
+        if (quest == null) return;
+        corpseQuests.Remove(quest);
+        if (quest.stages != null)
+            foreach (StageData s in quest.stages)
+                if (s != null) Destroy(s);
+        Destroy(quest);
     }
 
     // 구출 퀘스트 완료: 낙오 모험가를 구출하고 퀘스트를 목록에서 제거합니다.

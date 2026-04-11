@@ -43,12 +43,12 @@ public class QuestBoardPopup : MonoBehaviour
     {
         CleanupQuests();
 
-        // 1. 구출 퀘스트: 낙오자 발생 시 퀘스트 생성 + 항상 맨 위에 표시
+        // 1. 긴급 퀘스트: 구출 + 유해 수습 → 항상 맨 위에 표시
         if (GameManager.Instance != null)
         {
-            // 구출 퀘스트가 없는 낙오자에게 새로 생성
             if (questGenerator != null)
             {
+                // 구출 퀘스트: 낙오자에게 새로 생성
                 foreach (Adventurer adv in GameManager.Instance.adventurers)
                 {
                     if (!adv.isStranded) continue;
@@ -62,11 +62,29 @@ public class QuestBoardPopup : MonoBehaviour
                         Debug.Log($"🆘 [구출 퀘스트 생성] {adv.name} 구출 작전 의뢰가 게시됐습니다.");
                     }
                 }
+
+                // 유해 수습 퀘스트: 전사자에게 새로 생성
+                foreach (Adventurer deceased in GameManager.Instance.deadAdventurers)
+                {
+                    bool alreadyExists = GameManager.Instance.corpseQuests.Exists(q => q.corpseTargetName == deceased.name);
+                    if (alreadyExists) continue;
+
+                    QuestData cq = questGenerator.GenerateCorpseQuest(deceased);
+                    if (cq != null)
+                    {
+                        GameManager.Instance.corpseQuests.Add(cq);
+                        Debug.Log($"⚰️ [유해 수습 퀘스트 생성] {deceased.name} 유해 수습 의뢰가 게시됐습니다.");
+                    }
+                }
             }
 
-            // 구출 퀘스트를 목록 최상단에 추가 (GameManager가 수명 관리)
+            // 구출 퀘스트 최상단 추가
             foreach (QuestData rq in GameManager.Instance.rescueQuests)
                 if (rq != null) _activeQuests.Add(rq);
+
+            // 유해 수습 퀘스트 그 다음 추가
+            foreach (QuestData cq in GameManager.Instance.corpseQuests)
+                if (cq != null) _activeQuests.Add(cq);
         }
 
         // 2. 일반 랜덤 퀘스트 생성
@@ -96,8 +114,9 @@ public class QuestBoardPopup : MonoBehaviour
         {
             if (q == null || q == selected) continue;
 
-            // 구출 퀘스트는 GameManager가 수명 관리 → 여기서 파괴하지 않음
+            // 구출/유해 수습 퀘스트는 GameManager가 수명 관리 → 여기서 파괴하지 않음
             if (q.isRescueQuest) continue;
+            if (q.isCorpseQuest) continue;
 
             // 수동 Asset도 파괴하지 않음
             if (questGenerator == null) continue;
@@ -131,6 +150,14 @@ public class QuestBoardPopup : MonoBehaviour
                 if (texts.Length > 0) texts[0].text = quest.questName;
                 if (texts.Length > 1) texts[1].text = $"{quest.rewardGold:N0} G";
                 if (texts.Length > 2) texts[2].text = $"{urgency}⚠ {weeksLeft}주 남음</color>";
+                if (texts.Length > 3) texts[3].text = $"[{quest.rank}] 권장 Lv.{quest.recommendedLevel}";
+            }
+            else if (quest.isCorpseQuest)
+            {
+                // 유해 수습 퀘스트: 회색 표시 (기한 없음)
+                if (texts.Length > 0) texts[0].text = quest.questName;
+                if (texts.Length > 1) texts[1].text = $"{quest.rewardGold:N0} G";
+                if (texts.Length > 2) texts[2].text = "<color=grey>⚰ 유해 수습</color>";
                 if (texts.Length > 3) texts[3].text = $"[{quest.rank}] 권장 Lv.{quest.recommendedLevel}";
             }
             else

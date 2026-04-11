@@ -268,6 +268,16 @@ public class BattleManager : MonoBehaviour
                 if (GameManager.Instance.currentQuest != null && GameManager.Instance.currentQuest.isRescueQuest)
                     GameManager.Instance.CompleteRescueQuest(GameManager.Instance.currentQuest);
 
+                // 유해 수습 퀘스트 승리 시 → 유해 수습 보상 지급
+                if (GameManager.Instance.currentQuest != null && GameManager.Instance.currentQuest.isCorpseQuest)
+                    GameManager.Instance.CompleteCorpseQuest(GameManager.Instance.currentQuest);
+
+                // 승리 시 생환 파티원 경험치 지급
+                string rank = GameManager.Instance.currentQuest != null
+                    ? GameManager.Instance.currentQuest.rank : "D";
+                GameManager.Instance.GainExpAfterBattle(
+                    GameManager.Instance.currentDispatchParty.members, rank);
+
                 GameManager.Instance.currentDispatchParty = null;
                 GameManager.Instance.CleanupCurrentQuest();
             }
@@ -387,12 +397,17 @@ public class BattleManager : MonoBehaviour
             }
         }
 
-        // 전사자: 파티 & 모험가 명단에서 제거
+        // 전사자: 파티 & 모험가 명단에서 제거, 유해 수습 목록에 보존
+        string questName = GameManager.Instance.currentQuest != null
+            ? GameManager.Instance.currentQuest.questName : "알 수 없는 던전";
         foreach (Adventurer dead in deadList)
         {
+            dead.diedAtQuestName = questName;
             GameManager.Instance.currentDispatchParty.members.Remove(dead);
             GameManager.Instance.adventurers.Remove(dead);
-            Debug.Log($"💀 [전사] {dead.name}이(가) 사망했습니다.");
+            if (!GameManager.Instance.deadAdventurers.Contains(dead))
+                GameManager.Instance.deadAdventurers.Add(dead);
+            Debug.Log($"💀 [전사] {dead.name}이(가) '{questName}'에서 사망했습니다. (유해 수습 가능)");
         }
 
         // 낙오자: 파티에서만 제거 (adventurers 명단은 유지 → 나중에 구출 가능)
@@ -497,11 +512,17 @@ public class BattleManager : MonoBehaviour
             }
         }
         
+        string questNameForDead = GameManager.Instance.currentQuest != null
+            ? GameManager.Instance.currentQuest.questName : "알 수 없는 던전";
         foreach (Adventurer deadGuy in deadAdventurers)
         {
+            deadGuy.diedAtQuestName = questNameForDead;
             GameManager.Instance.currentDispatchParty.members.Remove(deadGuy);
             if (GameManager.Instance.adventurers.Contains(deadGuy))
                 GameManager.Instance.adventurers.Remove(deadGuy);
+            if (!GameManager.Instance.deadAdventurers.Contains(deadGuy))
+                GameManager.Instance.deadAdventurers.Add(deadGuy);
+            Debug.Log($"💀 [전사] {deadGuy.name}이(가) '{questNameForDead}'에서 사망했습니다. (유해 수습 가능)");
         }
     }
 }

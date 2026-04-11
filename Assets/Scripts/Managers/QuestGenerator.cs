@@ -108,6 +108,36 @@ public class QuestGenerator : MonoBehaviour
         return quest;
     }
 
+    // ─── 유해 수습 퀘스트 생성 ───────────────────────────────────────
+
+    // 전사한 모험가의 유해를 수습하는 퀘스트를 생성합니다.
+    public QuestData GenerateCorpseQuest(Adventurer deceased)
+    {
+        List<GameObject> pool = GetPool(deceased.rank);
+        if (pool == null || pool.Count == 0) pool = tierD_Prefabs;
+        if (pool == null || pool.Count == 0)
+        {
+            Debug.LogWarning($"[QuestGenerator] 유해 수습 퀘스트 생성 실패: 적 풀이 비어있습니다.");
+            return null;
+        }
+
+        GameObject mainEnemy = pool[Random.Range(0, pool.Count)];
+
+        QuestData quest           = ScriptableObject.CreateInstance<QuestData>();
+        quest.isCorpseQuest       = true;
+        quest.corpseTargetName    = deceased.name;
+        quest.rank                = deceased.rank.ToString();
+        string location = string.IsNullOrEmpty(deceased.diedAtQuestName) ? "알 수 없는 던전" : deceased.diedAtQuestName;
+        quest.questName           = $"[유해 수습] {deceased.name}의 유해 수습";
+        quest.description         = $"{deceased.name}이(가) '{location}'에서 전사했습니다. 유해를 수습하면 유품이나 영혼석을 얻을 수 있습니다.";
+        quest.rewardGold          = GetReward(deceased.rank) / 2;
+        quest.recommendedLevel    = GetRecLevel(deceased.rank);
+        quest.enemyPrefab         = mainEnemy;
+        quest.stages              = BuildStages(pool, deceased.rank);
+
+        return quest;
+    }
+
     // ─── 보조 테이블 ─────────────────────────────────────────────────
 
     List<GameObject> GetPool(RankType rank)

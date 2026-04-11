@@ -25,4 +25,8 @@ public class QuestData : ScriptableObject
     [Header("구출 퀘스트 전용")]
     public bool isRescueQuest = false;
     public string rescueTargetName = ""; // 구출 대상 모험가 이름
+
+    [Header("유해 수습 퀘스트 전용")]
+    public bool isCorpseQuest = false;
+    public string corpseTargetName = ""; // 유해 주인 모험가 이름
 }
